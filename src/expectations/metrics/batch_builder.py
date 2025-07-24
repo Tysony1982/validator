@@ -14,7 +14,7 @@ from typing import List, Optional, Sequence
 
 from sqlglot import exp, parse_one, select
 
-from src.expectations.metrics.registry import get_metric
+from src.expectations.metrics.registry import get_metric, available_metrics
 
 # --------------------------------------------------------------------------- #
 # Public request model                                                        #
@@ -44,7 +44,8 @@ class MetricBatchBuilder:
         self.requests = list(requests)
         self.dialect = dialect
 
-        unknown = {r.metric for r in self.requests if r.metric not in get_metric.__wrapped__.__closure__[0].cell_contents}  # type: ignore
+        known = set(available_metrics())
+        unknown = {r.metric for r in self.requests if r.metric not in known}
         if unknown:
             raise ValueError(f"Unknown metrics: {', '.join(sorted(unknown))}")
 
