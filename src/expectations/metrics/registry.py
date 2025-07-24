@@ -81,33 +81,35 @@ def available_metrics() -> Tuple[str, ...]:
     return tuple(_METRICS)
 
 
-# --------------------------------------------------------------------------- #
-# Built-in metric builders                                                    #
-# --------------------------------------------------------------------------- #
+# ------------------------------------------------------------------ #
+# Built-in metric builders                                           #
+# ------------------------------------------------------------------ #
 @register_metric("null_pct")
 def _null_pct(column: str) -> exp.Expression:
     """
-    ``SUM(CASE WHEN <col> IS NULL THEN 1 ELSE 0 END) / COUNT(*)``
+    SUM(CASE WHEN col IS NULL THEN 1 ELSE 0 END) / COUNT(*)
     """
-    null_case = (
+    col_expr = exp.column(column)
+    case_expr = (
         exp.Case()
-        .when(exp.Is(exp.column(column), exp.null()), exp.Literal.number(1))
-        .else_(0)
+        .when(exp.Is(this=col_expr, expression=exp.null()), exp.Literal.number(1))
+        .else_(exp.Literal.number(0))
     )
-    return exp.Divide(this=exp.Sum(null_case), expression=exp.Count(exp.Star()))
+    sum_nulls  = exp.Sum(this=case_expr)
+    count_rows = exp.Count(this=exp.Star())
+
+    # Use exp.Div (division) – correct class name in sqlglot
+    return exp.Div(this=sum_nulls, expression=count_rows)
 
 
 @register_metric("distinct_cnt")
 def _distinct_cnt(column: str) -> exp.Expression:
-    """
-    ``COUNT(DISTINCT <col>)``
-    """
-    return exp.Count(exp.Distinct(exp.column(column)))
+    """COUNT(DISTINCT col)"""
+    distinct = exp.Distinct(this=exp.column(column))
+    return exp.Count(this=distinct)
 
 
 @register_metric("row_cnt")
-def _row_cnt(_: str) -> exp.Expression:  # column argument ignored
-    """
-    ``COUNT(*)`` – useful for table-level validators.
-    """
-    return exp.Count(exp.Star())
+def _row_cnt(_: str) -> exp.Expression:
+    """COUNT(*)"""
+    return exp.Count(this=exp.Star())
