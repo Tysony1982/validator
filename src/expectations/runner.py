@@ -95,6 +95,7 @@ class ValidationRunner:
             engine = self.engine_map[eng_key]
             sql_or_ast = v.custom_sql(table)
             sql = sql_or_ast.sql() if isinstance(sql_or_ast, exp.Expression) else str(sql_or_ast)
+            err = ""
             try:
                 df = engine.run_sql(sql)
                 # convention: custom validators look at *first scalar* of first row

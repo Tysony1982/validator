@@ -59,7 +59,7 @@ class ExpectationSuiteConfig(BaseModel):
             if not issubclass(cls, ValidatorBase):
                 raise TypeError(f"{cfg.expectation_type} is not a ValidatorBase")
 
-            init_kwargs = dict(cfg.kwargs or {})
+            init_kwargs = dict(getattr(cfg, "kwargs", {}) or {})
             if cfg.column:
                 init_kwargs["column"] = cfg.column
             if cfg.where:

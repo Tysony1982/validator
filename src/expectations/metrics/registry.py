@@ -105,7 +105,7 @@ def _null_pct(column: str) -> exp.Expression:
 @register_metric("distinct_cnt")
 def _distinct_cnt(column: str) -> exp.Expression:
     """COUNT(DISTINCT col)"""
-    distinct = exp.Distinct(this=exp.column(column))
+    distinct = exp.Distinct(expressions=[exp.column(column)])
     return exp.Count(this=distinct)
 
 
@@ -113,3 +113,15 @@ def _distinct_cnt(column: str) -> exp.Expression:
 def _row_cnt(_: str) -> exp.Expression:
     """COUNT(*)"""
     return exp.Count(this=exp.Star())
+
+
+@register_metric("min")
+def _min(column: str) -> exp.Expression:
+    """MIN(col)"""
+    return exp.Min(this=exp.column(column))
+
+
+@register_metric("max")
+def _max(column: str) -> exp.Expression:
+    """MAX(col)"""
+    return exp.Max(this=exp.column(column))
