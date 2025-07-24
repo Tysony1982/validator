@@ -101,12 +101,12 @@ class DuplicateRowValidator(ValidatorBase):
             ) d
         """
         inner = (
-            exp.select(*map(exp.column, self.key_cols), exp.Count(exp.Star()).as_("c"))
+            exp.select(*map(exp.column, self.key_cols), exp.Count(this=exp.Star()).as_("c"))
             .from_(table)
             .group_by(*map(exp.column, self.key_cols))
-            .having(exp.gt(exp.column("c"), 1))
+            .having(exp.GT(this=exp.column("c"), expression=exp.Literal.number(1)))
         )
-        return exp.select(exp.Count(exp.Star()).as_("dup_cnt")).from_(inner.subquery("d"))
+        return exp.select(exp.Count(this=exp.Star()).as_("dup_cnt")).from_(inner.subquery("d"))
 
     def interpret(self, value) -> bool:
         self.duplicate_cnt = int(value)
