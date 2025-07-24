@@ -27,22 +27,6 @@ from src.expectations.metrics.registry import register_metric, get_metric
 from src.expectations.validators.base import ValidatorBase
 
 
-# --------------------------------------------------------------------------- #
-# Register additional metric builders                                         #
-# --------------------------------------------------------------------------- #
-@register_metric("min")
-def _metric_min(column: str) -> exp.Expression:
-    return exp.Min(exp.column(column))
-
-
-@register_metric("max")
-def _metric_max(column: str) -> exp.Expression:
-    return exp.Max(exp.column(column))
-
-
-@register_metric("row_cnt")
-def _metric_row_cnt(_: str) -> exp.Expression:  # column param ignored
-    return exp.Count(exp.Star())
 
 
 # --------------------------------------------------------------------------- #

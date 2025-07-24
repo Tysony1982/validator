@@ -20,14 +20,6 @@ from src.expectations.validators.base import ValidatorBase
 from src.expectations.metrics.registry import register_metric
 from src.expectations.metrics.registry import available_metrics as _avail
 
-# --------------------------------------------------------------------------- #
-# Register row_cnt if not already present (defensive)                         #
-# --------------------------------------------------------------------------- #
-if "row_cnt" not in _avail():
-    @register_metric("row_cnt")
-    def _metric_row_cnt(_: str) -> exp.Expression:  # column arg ignored
-        return exp.Count(exp.Star())
-
 
 # --------------------------------------------------------------------------- #
 # Row-count validator                                                         #
