@@ -26,6 +26,8 @@ class ExpectationConfig(BaseModel):
     expectation_type: str  # class name of the validator
     column: str | None = None
     where: str | None = None
+    sql: str | None = None
+    max_error_rows: int | None = None
     kwargs: Dict[str, Any] = Field(default_factory=dict)
     tags: List[str] = Field(default_factory=list)
     severity: str | None = None  # INFO / WARN / FAIL
@@ -54,8 +56,13 @@ class ExpectationSuiteConfig(BaseModel):
         """
         bindings: List[ValidatorBinding] = []
 
+        from src.expectations.validators.custom import SqlErrorRowsValidator
+
         for cfg in self.expectations:
-            cls = _resolve_validator_class(cfg.expectation_type)
+            if cfg.expectation_type == "SqlErrorRows":
+                cls = SqlErrorRowsValidator
+            else:
+                cls = _resolve_validator_class(cfg.expectation_type)
             if not issubclass(cls, ValidatorBase):
                 raise TypeError(f"{cfg.expectation_type} is not a ValidatorBase")
 
@@ -64,6 +71,10 @@ class ExpectationSuiteConfig(BaseModel):
                 init_kwargs["column"] = cfg.column
             if cfg.where:
                 init_kwargs["where"] = cfg.where
+            if cfg.sql:
+                init_kwargs["sql"] = cfg.sql
+            if cfg.max_error_rows is not None:
+                init_kwargs["max_error_rows"] = cfg.max_error_rows
             if cfg.threshold is not None:
                 init_kwargs["threshold"] = cfg.threshold
             if cfg.severity:
