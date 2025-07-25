@@ -1,0 +1,56 @@
+import pandas as pd
+import sys
+
+from src.expectations.engines.duckdb import DuckDBEngine
+from src.expectations.runner import ValidationRunner
+from src.expectations.validators.custom import SqlErrorRowsValidator
+from src.expectations.validators.column import ColumnNotNull
+from src.expectations.config.expectation import ExpectationSuiteConfig
+
+
+def _run(eng, table, validator):
+    runner = ValidationRunner({"duck": eng})
+    return runner.run([("duck", table, validator)])[0]
+
+
+def test_sql_error_rows_pass():
+    eng = DuckDBEngine()
+    eng.register_dataframe("t", pd.DataFrame({"a": [1]}))
+    v = SqlErrorRowsValidator(sql="SELECT * FROM t WHERE 1=0")
+    res = _run(eng, "t", v)
+    assert res.success is True
+
+
+def test_sql_error_rows_fail_details():
+    eng = DuckDBEngine()
+    eng.register_dataframe("t", pd.DataFrame({"a": [1, 2, 3]}))
+    v = SqlErrorRowsValidator(sql="SELECT * FROM t", max_error_rows=2)
+    res = _run(eng, "t", v)
+    assert res.success is False
+    assert res.details["error_row_count"] == 3
+    assert len(res.details["error_rows_sample"]) <= 2
+
+
+def test_runner_integration_with_config(tmp_path):
+    eng = DuckDBEngine()
+    eng.register_dataframe("t", pd.DataFrame({"a": [1], "b": [1]}))
+    yaml_content = """
+suite_name: demo_custom
+engine: duck
+table: t
+expectations:
+  - expectation_type: SqlErrorRows
+    sql: |
+      SELECT * FROM t WHERE 1=0
+  - expectation_type: ColumnNotNull
+    column: b
+"""
+    path = tmp_path / "suite.yml"
+    path.write_text(yaml_content)
+    sys.modules.setdefault("validator.validators.custom", sys.modules[SqlErrorRowsValidator.__module__])
+    sys.modules.setdefault("validator.validators.column", sys.modules[ColumnNotNull.__module__])
+    cfg = ExpectationSuiteConfig.from_yaml(path)
+    runner = ValidationRunner({"duck": eng})
+    results = runner.run(cfg.build_validators())
+    assert len(results) == 2
+

@@ -13,12 +13,12 @@ from __future__ import annotations
 
 from typing import List, Sequence
 
+import pandas as pd
+
 from sqlglot import exp
 
 from src.expectations.metrics.batch_builder import MetricRequest
 from src.expectations.validators.base import ValidatorBase
-from src.expectations.metrics.registry import register_metric
-from src.expectations.metrics.registry import available_metrics as _avail
 
 
 # --------------------------------------------------------------------------- #
@@ -101,13 +101,58 @@ class DuplicateRowValidator(ValidatorBase):
             ) d
         """
         inner = (
-            exp.select(*map(exp.column, self.key_cols), exp.Count(exp.Star()).as_("c"))
+            exp.select(
+                *map(exp.column, self.key_cols), exp.Count(this=exp.Star()).as_("c")
+            )
             .from_(table)
             .group_by(*map(exp.column, self.key_cols))
-            .having(exp.gt(exp.column("c"), 1))
+            .having(exp.GT(this=exp.column("c"), expression=exp.Literal.number(1)))
         )
-        return exp.select(exp.Count(exp.Star()).as_("dup_cnt")).from_(inner.subquery("d"))
+        return exp.select(exp.Count(this=exp.Star()).as_("dup_cnt")).from_(
+            inner.subquery("d")
+        )
 
     def interpret(self, value) -> bool:
-        self.duplicate_cnt = int(value)
-        return self.duplicate_cnt == 0
+        if isinstance(value, pd.DataFrame):
+            dup_cnt = int(value.iloc[0, 0]) if not value.empty else 0
+        else:
+            dup_cnt = int(value or 0)
+        self.duplicate_cnt = dup_cnt
+        return dup_cnt == 0
+
+
+class PrimaryKeyUniquenessValidator(ValidatorBase):
+    """Passes when the set of ``key_columns`` uniquely identifies each row.
+
+    Example YAML::
+
+        - expectation_type: PrimaryKeyUniquenessValidator
+          key_columns: [id]
+    """
+
+    def __init__(self, *, key_columns: Sequence[str]):
+        super().__init__()
+        if not key_columns:
+            raise ValueError("key_columns must be a non-empty list")
+        self.key_cols = list(key_columns)
+
+    @classmethod
+    def kind(cls):
+        return "custom"
+
+    def custom_sql(self, table: str):
+        distinct = exp.Count(
+            this=exp.Distinct(expressions=[exp.column(c) for c in self.key_cols])
+        )
+        diff = exp.Sub(this=exp.Count(this=exp.Star()), expression=distinct).as_(
+            "dup_cnt"
+        )
+        return exp.select(diff).from_(table)
+
+    def interpret(self, value) -> bool:
+        if isinstance(value, pd.DataFrame):
+            dup_cnt = int(value.iloc[0, 0]) if not value.empty else 0
+        else:
+            dup_cnt = int(value or 0)
+        self.duplicate_cnt = dup_cnt
+        return dup_cnt == 0

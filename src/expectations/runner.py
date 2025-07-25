@@ -95,16 +95,18 @@ class ValidationRunner:
             engine = self.engine_map[eng_key]
             sql_or_ast = v.custom_sql(table)
             sql = sql_or_ast.sql() if isinstance(sql_or_ast, exp.Expression) else str(sql_or_ast)
+            err = ""
             try:
                 df = engine.run_sql(sql)
-                # convention: custom validators look at *first scalar* of first row
-                raw_val = df.iloc[0, 0] if not df.empty else None
-                ok = v.interpret(raw_val)
+                ok = v.interpret(df)
+                raw_val = None
             except Exception as exc:  # pylint: disable=broad-except
                 ok = False
                 raw_val = None
                 err = str(exc)
 
+            base_details = getattr(v, "details", {})
+            details = base_details if ok else {**base_details, "error": err}
             results.append(
                 ValidationResult(
                     run_id="",
@@ -113,7 +115,7 @@ class ValidationRunner:
                     column=getattr(v, "column", None),
                     success=ok,
                     value=raw_val,
-                    details={} if ok else {"error": err},
+                    details=details,
                 )
             )
 
