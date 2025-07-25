@@ -8,6 +8,10 @@ from src.expectations.validators.column import (
     ColumnDistinctCount,
     ColumnMin,
     ColumnMax,
+    ColumnValueInSet,
+    ColumnMatchesRegex,
+    ColumnRange,
+    ColumnGreaterEqual,
 )
 
 
@@ -57,6 +61,52 @@ def test_column_min_max_strict_vs_inclusive():
     eng.register_dataframe("t", df)
 
     assert _run(eng, "t", ColumnMin(column="a", min_value=1)).success is True
-    assert _run(eng, "t", ColumnMin(column="a", min_value=1, strict=True)).success is False
+    assert (
+        _run(eng, "t", ColumnMin(column="a", min_value=1, strict=True)).success is False
+    )
     assert _run(eng, "t", ColumnMax(column="a", max_value=3)).success is True
-    assert _run(eng, "t", ColumnMax(column="a", max_value=3, strict=True)).success is False
+    assert (
+        _run(eng, "t", ColumnMax(column="a", max_value=3, strict=True)).success is False
+    )
+
+
+def test_column_value_in_set():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": ["A", "B", "A"]})
+    eng.register_dataframe("t", df)
+    ok = _run(eng, "t", ColumnValueInSet(column="a", allowed_values=["A", "B"]))
+    assert ok.success is True
+    fail = _run(eng, "t", ColumnValueInSet(column="a", allowed_values=["A"]))
+    assert fail.success is False
+
+
+def test_column_matches_regex():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": ["x1", "y2", "z"]})
+    eng.register_dataframe("t", df)
+    v = ColumnMatchesRegex(column="a", pattern="^[a-z][0-9]")
+    assert _run(eng, "t", v).success is False
+
+
+def test_column_range():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    eng.register_dataframe("t", df)
+    assert (
+        _run(eng, "t", ColumnRange(column="a", min_value=1, max_value=3)).success
+        is True
+    )
+    assert (
+        _run(
+            eng, "t", ColumnRange(column="a", min_value=1, max_value=3, strict=True)
+        ).success
+        is False
+    )
+
+
+def test_column_greater_equal():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [1, 2], "b": [2, 1]})
+    eng.register_dataframe("t", df)
+    v = ColumnGreaterEqual(column="b", other_column="a")
+    assert _run(eng, "t", v).success is False

@@ -35,3 +35,19 @@ def test_min_max():
     df = eng.run_sql(select(min_expr, max_expr).from_("t"))
     assert df.iloc[0]["mn"] == 1
     assert df.iloc[0]["mx"] == 5
+
+
+def test_extra_metrics():
+    eng = DuckDBEngine()
+    eng.register_dataframe("t", pd.DataFrame({"a": [1, 2, None]}))
+
+    nn_expr = get_metric("non_null_cnt")("a")
+    avg_expr = get_metric("avg")("a")
+    stddev_expr = get_metric("stddev")("a")
+
+    df = eng.run_sql(
+        select(nn_expr.as_("nn"), avg_expr.as_("avg"), stddev_expr.as_("sd")).from_("t")
+    )
+    assert df.iloc[0]["nn"] == 2
+    assert df.iloc[0]["avg"] == approx(1.5)
+    assert df.iloc[0]["sd"] == approx((0.5) ** 0.5)

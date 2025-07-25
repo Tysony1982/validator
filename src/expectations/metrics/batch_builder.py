@@ -16,6 +16,7 @@ from sqlglot import exp, parse_one, select
 
 from src.expectations.metrics.registry import get_metric, available_metrics
 
+
 # --------------------------------------------------------------------------- #
 # Public request model                                                        #
 # --------------------------------------------------------------------------- #
@@ -53,19 +54,22 @@ class MetricBatchBuilder:
     # Private helpers                                                    #
     # ------------------------------------------------------------------ #
     @staticmethod
-    def _apply_filter(expr: exp.Expression, filter_sql: Optional[str]) -> exp.Expression:
+    def _apply_filter(
+        expr: exp.Expression, filter_sql: Optional[str]
+    ) -> exp.Expression:
         if not filter_sql:
             return expr
 
         filter_exp = parse_one(filter_sql)
-        if isinstance(expr, exp.Count) and not expr.args.get("filter"):
-            expr.set("filter", filter_exp)
-            return expr
-
-        # generic SUM(CASE WHEN …) fallback
-        return exp.Function(
-            this="SUM",
-            expressions=[exp.Case().when(filter_exp, expr).else_(exp.null())],
+        # COUNT expressions do not support FILTER in older sqlglot versions, so
+        # always fall back to a SUM(CASE WHEN …) wrapper.
+        if isinstance(expr, exp.Count):
+            body = exp.Literal.number(1)
+        else:
+            body = expr
+        return exp.func(
+            "SUM",
+            exp.Case().when(filter_exp, body).else_(exp.null()),
         )
 
     # ------------------------------------------------------------------ #
