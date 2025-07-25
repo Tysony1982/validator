@@ -2,7 +2,11 @@ import pandas as pd
 
 from src.expectations.engines.duckdb import DuckDBEngine
 from src.expectations.runner import ValidationRunner
-from src.expectations.validators.table import RowCountValidator, DuplicateRowValidator
+from src.expectations.validators.table import (
+    RowCountValidator,
+    DuplicateRowValidator,
+    PrimaryKeyUniquenessValidator,
+)
 
 
 def _run(eng, table, validator):
@@ -29,5 +33,22 @@ def test_duplicate_row_validator():
     eng.register_dataframe("dup", df_dup)
     eng.register_dataframe("ok", df_ok)
 
-    assert _run(eng, "dup", DuplicateRowValidator(key_columns=["a", "b"])).success is False
-    assert _run(eng, "ok", DuplicateRowValidator(key_columns=["a", "b"])).success is True
+    assert (
+        _run(eng, "dup", DuplicateRowValidator(key_columns=["a", "b"])).success is False
+    )
+    assert (
+        _run(eng, "ok", DuplicateRowValidator(key_columns=["a", "b"])).success is True
+    )
+
+
+def test_primary_key_uniqueness():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"id": [1, 1, 2]})
+    eng.register_dataframe("t", df)
+    v = PrimaryKeyUniquenessValidator(key_columns=["id"])
+    assert _run(eng, "t", v).success is False
+    eng.register_dataframe("t2", pd.DataFrame({"id": [1, 2]}))
+    assert (
+        _run(eng, "t2", PrimaryKeyUniquenessValidator(key_columns=["id"])).success
+        is True
+    )
