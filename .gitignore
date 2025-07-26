@@ -1,4 +1,6 @@
 .venv
 __pycache__*
+__pycache__/*
 src/expectations/metrics/__pycache__/registry.cpython-312.pyc
+src/expectations/engines/__pycache__/
 settings.json
