@@ -109,6 +109,45 @@ class ExpectationSuiteConfig(BaseModel):
         raise ValueError(f"Unsupported config extension: {ext}")
 
 
+class SLAConfig(BaseModel):
+    """Group multiple expectation suites under a single SLA."""
+
+    sla_name: str
+    suites: List[ExpectationSuiteConfig]
+
+    # ------------------------------------------------------------------ #
+    # Factory helpers                                                    #
+    # ------------------------------------------------------------------ #
+    def build_validators(self) -> Sequence[ValidatorBinding]:
+        """Aggregate bindings for all contained suites."""
+        bindings: List[ValidatorBinding] = []
+        for suite in self.suites:
+            bindings.extend(suite.build_validators())
+        return bindings
+
+    # ------------------------------------------------------------------ #
+    # I/O                                                                 #
+    # ------------------------------------------------------------------ #
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> "SLAConfig":
+        with open(path, "r") as fh:
+            return cls.model_validate(yaml.safe_load(fh))
+
+    @classmethod
+    def from_json(cls, path: str | Path) -> "SLAConfig":
+        with open(path, "r") as fh:
+            return cls.model_validate_json(fh.read())
+
+    @classmethod
+    def from_file(cls, path: str | Path) -> "SLAConfig":
+        ext = Path(path).suffix.lower()
+        if ext in {".yml", ".yaml"}:
+            return cls.from_yaml(path)
+        if ext == ".json":
+            return cls.from_json(path)
+        raise ValueError(f"Unsupported config extension: {ext}")
+
+
 # --------------------------------------------------------------------------- #
 # Internal helpers                                                            #
 # --------------------------------------------------------------------------- #
