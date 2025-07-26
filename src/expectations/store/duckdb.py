@@ -1,0 +1,79 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Sequence, Optional
+
+import duckdb
+
+from src.expectations.result_model import RunMetadata, ValidationResult
+from .base import BaseResultStore
+from src.expectations.engines.duckdb import DuckDBEngine
+
+
+class DuckDBResultStore(BaseResultStore):
+    """Persist results into a DuckDB database using :class:`DuckDBEngine`."""
+
+    def __init__(self, database: str | Path = ":memory:", *, engine: Optional[DuckDBEngine] = None):
+        self._engine = engine or DuckDBEngine(database)
+        self._init_schema()
+
+    def _init_schema(self) -> None:
+        self._engine.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS runs(
+                run_id TEXT PRIMARY KEY,
+                suite_name TEXT,
+                started_at TIMESTAMP,
+                finished_at TIMESTAMP
+            )
+            """
+        )
+        self._engine.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS results(
+                run_id TEXT,
+                validator TEXT,
+                table_name TEXT,
+                column_name TEXT,
+                metric TEXT,
+                success BOOLEAN,
+                value TEXT,
+                severity TEXT,
+                filter_sql TEXT,
+                details TEXT
+            )
+            """
+        )
+
+    # ------------------------------------------------------------------ #
+    # BaseResultStore interface
+    # ------------------------------------------------------------------ #
+    def persist_run(self, run: RunMetadata, results: Sequence[ValidationResult]) -> None:
+        self._engine.connection.execute(
+            "INSERT INTO runs VALUES (?, ?, ?, ?)",
+            (run.run_id, run.suite_name, run.started_at, run.finished_at),
+        )
+        for r in results:
+            self._engine.connection.execute(
+                "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    r.run_id,
+                    r.validator,
+                    r.table,
+                    r.column,
+                    r.metric,
+                    r.success,
+                    r.value,
+                    r.severity,
+                    r.filter_sql,
+                    json.dumps(r.details),
+                ),
+            )
+
+    @property
+    def connection(self) -> duckdb.DuckDBPyConnection:  # pragma: no cover - helper
+        return self._engine.connection
+
+    def close(self) -> None:  # pragma: no cover
+        self._engine.close()

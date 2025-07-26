@@ -52,5 +52,23 @@ suites:
     table: orders
     expectations:
       - expectation_type: ColumnNotNull
-        column: order_id
+          column: order_id
+  ```
+
+## Persisting Validation Results
+
+Validation results can be stored for later analysis using pluggable stores.
+The `DuckDBResultStore` writes run metadata and results into a DuckDB
+database:
+
+```python
+from src.expectations.engines.duckdb import DuckDBEngine
+from src.expectations.store import DuckDBResultStore
+from src.expectations.runner import ValidationRunner
+
+engine = DuckDBEngine("results.db")
+store = DuckDBResultStore(engine)
+runner = ValidationRunner({"duck": DuckDBEngine()})
+results = runner.run(bindings)
+store.persist_run(RunMetadata(suite_name="demo"), results)
 ```
