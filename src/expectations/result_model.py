@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 class RunMetadata(BaseModel):
     run_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     suite_name: str
+    sla_name: Optional[str] = None
     started_at: datetime = Field(default_factory=datetime.utcnow)
     finished_at: Optional[datetime] = None
 

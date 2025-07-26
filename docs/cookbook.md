@@ -22,6 +22,7 @@ like you would against any database table.
 ```python
 from src.expectations.engines.file import FileEngine
 from src.expectations.runner import ValidationRunner
+from src.expectations.config.expectation import SLAConfig
 from src.expectations.validators.column import ColumnNotNull
 
 eng = FileEngine("/data/myfile.csv", table="data")
@@ -70,5 +71,7 @@ engine = DuckDBEngine("results.db")
 store = DuckDBResultStore(engine)
 runner = ValidationRunner({"duck": DuckDBEngine()})
 results = runner.run(bindings)
-store.persist_run(RunMetadata(suite_name="demo"), results)
+# persist results with optional SLA configuration
+sla_cfg = SLAConfig(sla_name="nightly", suites=[])
+store.persist_run(RunMetadata(suite_name="demo", sla_name="nightly"), results, sla_cfg)
 ```
