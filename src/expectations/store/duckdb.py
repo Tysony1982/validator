@@ -14,7 +14,8 @@ from src.expectations.engines.duckdb import DuckDBEngine
 class DuckDBResultStore(BaseResultStore):
     """Persist results into a DuckDB database using :class:`DuckDBEngine`."""
 
-    def __init__(self, database: str | Path = ":memory:", *, engine: Optional[DuckDBEngine] = None):
+    def __init__(self, engine: Optional[DuckDBEngine] = None, *, database: str | Path = ":memory:"):
+        """Create a result store backed by *engine* or a new DuckDBEngine."""
         self._engine = engine or DuckDBEngine(database)
         self._init_schema()
 
