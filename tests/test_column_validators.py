@@ -13,6 +13,7 @@ from src.expectations.validators.column import (
     ColumnRange,
     ColumnGreaterEqual,
 )
+from src.expectations.validators.table import RowCountValidator
 
 
 def _run(eng, table, validator):
@@ -110,3 +111,25 @@ def test_column_greater_equal():
     eng.register_dataframe("t", df)
     v = ColumnGreaterEqual(column="b", other_column="a")
     assert _run(eng, "t", v).success is False
+
+def test_where_clause_filters_rows():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [1, None], "b": [0, 1]})
+    eng.register_dataframe("t", df)
+    v_pass = RowCountValidator(min_rows=1, max_rows=1, where="b = 0")
+    res_pass = _run(eng, "t", v_pass)
+    assert res_pass.success is True
+    v_fail = RowCountValidator(min_rows=1, max_rows=0, where="b = 1")
+    res_fail = _run(eng, "t", v_fail)
+    assert res_fail.success is False
+
+
+def test_row_count_where_clause():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [1, 1, 2]})
+    eng.register_dataframe("t", df)
+    v = RowCountValidator(min_rows=1, max_rows=1, where="b = 2")
+    res = _run(eng, "t", v)
+    assert res.success is True
+
+
