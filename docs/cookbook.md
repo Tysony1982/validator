@@ -31,3 +31,26 @@ results = runner.run([("file", "data", ColumnNotNull(column="id"))])
 
 Wildcards such as `"/data/*.parquet"` combine many files. DuckDB scans the files lazily,
 so only the columns required by each validator are read into memory.
+
+## Grouping Suites into SLAs
+
+Multiple expectation suites can be bundled under a single SLA configuration.
+Each SLA lists the suites it contains and `build_validators()` will aggregate all
+validators for execution.
+
+```yaml
+sla_name: nightly_checks
+suites:
+  - suite_name: users_basic
+    engine: duck
+    table: users
+    expectations:
+      - expectation_type: ColumnNotNull
+        column: id
+  - suite_name: orders_basic
+    engine: duck
+    table: orders
+    expectations:
+      - expectation_type: ColumnNotNull
+        column: order_id
+```
