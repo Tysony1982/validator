@@ -51,3 +51,15 @@ def test_extra_metrics():
     assert df.iloc[0]["nn"] == 2
     assert df.iloc[0]["avg"] == approx(1.5)
     assert df.iloc[0]["sd"] == approx((0.5) ** 0.5)
+
+
+def test_pct_where_builder(tmp_path):
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [1, 0, 1]})
+    eng.register_dataframe("t", df)
+    from src.expectations.metrics.registry import pct_where
+
+    builder = pct_where("b = 1")
+    expr = builder("a")
+    val = _run_expr(eng, "t", expr)
+    assert val == approx(2 / 3)
