@@ -76,7 +76,7 @@ class TableStatsCollector:
                     metric=metric,
                     value=row[alias],
                     engine_name=engine_key,
-                    schema=schema,
+                    db_schema=schema,
                 )
             )
         return stats
