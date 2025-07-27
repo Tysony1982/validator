@@ -33,6 +33,8 @@ def test_duckdb_store_persist(tmp_path):
 
     assert len(df_runs) == 1
     assert len(df_results) == 1
+    assert df_runs.loc[0, "engine_name"] == "duck"
+    assert df_results.loc[0, "engine_name"] == "duck"
     assert bool(df_results.loc[0, "success"]) is True
 
 
@@ -69,5 +71,6 @@ def test_duckdb_store_persist_sla(tmp_path):
     df_slas = store.connection.execute("SELECT * FROM slas").fetchdf()
 
     assert len(df_runs) == 1
+    assert df_runs.loc[0, "engine_name"] == "duck"
     assert df_runs.loc[0, "sla_name"] == "sla1"
     assert len(df_slas) == 1

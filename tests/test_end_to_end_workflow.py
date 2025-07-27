@@ -82,6 +82,8 @@ def test_full_end_to_end_workflow(tmp_path):
 
     assert len(df_runs) == 2
     assert set(df_runs["suite_name"]) == {"orders_suite", "customers_suite"}
+    assert set(df_runs["engine_name"]) == {"duck"}
 
     assert len(df_results) == 9
+    assert set(df_results["engine_name"]) == {"duck"}
     assert df_results["success"].sum() == 3

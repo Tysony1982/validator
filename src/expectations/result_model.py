@@ -18,6 +18,8 @@ class RunMetadata(BaseModel):
     run_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     suite_name: str
     sla_name: Optional[str] = None
+    engine_name: Optional[str] = None
+    schema: Optional[str] = None
     started_at: datetime = Field(default_factory=datetime.utcnow)
     finished_at: Optional[datetime] = None
 
@@ -29,6 +31,8 @@ class ValidationResult(BaseModel):
     run_id: str
     validator: str
     table: str
+    engine_name: Optional[str] = None
+    schema: Optional[str] = None
     column: Optional[str] = None
     metric: Optional[str] = None
     success: bool
