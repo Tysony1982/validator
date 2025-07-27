@@ -10,6 +10,9 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Dict, List, Sequence, Tuple
 
+import duckdb
+import traceback
+
 import pandas as pd
 from sqlglot import exp
 
@@ -74,7 +77,8 @@ class ValidationRunner:
                             filter_sql=v.where_condition,
                         )
                     )
-            except Exception as exc:  # pylint: disable=broad-except
+            except (duckdb.Error, ValueError, RuntimeError) as exc:
+                tb = traceback.format_exc()
                 for v in validators:
                     results.append(
                         ValidationResult(
@@ -86,7 +90,7 @@ class ValidationRunner:
                             success=False,
                             value=None,
                             filter_sql=v.where_condition,
-                            details={"error": str(exc)},
+                            details={"error": str(exc), "traceback": tb},
                         )
                     )
 
@@ -96,17 +100,23 @@ class ValidationRunner:
             sql_or_ast = v.custom_sql(table)
             sql = sql_or_ast.sql() if isinstance(sql_or_ast, exp.Expression) else str(sql_or_ast)
             err = ""
+            err_tb = ""
             try:
                 df = engine.run_sql(sql)
                 ok = v.interpret(df)
                 raw_val = None
-            except Exception as exc:  # pylint: disable=broad-except
+            except (duckdb.Error, ValueError, RuntimeError) as exc:
                 ok = False
                 raw_val = None
                 err = str(exc)
+                err_tb = traceback.format_exc()
 
             base_details = getattr(v, "details", {})
-            details = base_details if ok else {**base_details, "error": err}
+            details = (
+                base_details
+                if ok
+                else {**base_details, "error": err, "traceback": err_tb}
+            )
             results.append(
                 ValidationResult(
                     run_id=run_id,
