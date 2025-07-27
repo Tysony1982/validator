@@ -14,7 +14,7 @@ def test_register_metric_duplicate_key():
         def _metric2(col: str) -> exp.Expression:  # pragma: no cover - should not be executed
             return exp.column(col)
     # cleanup
-    del registry._METRICS["_dup"]
+    registry.MetricRegistry.instance()._metrics.pop("_dup", None)
 
 
 def test_builtin_metric_retrieval():

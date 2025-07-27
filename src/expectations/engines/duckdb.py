@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 from pathlib import Path
+from queue import Queue
 from typing import List, Sequence
 
 import duckdb
@@ -39,9 +40,21 @@ class DuckDBEngine(BaseEngine):
         Open the database in read-only mode (ignored for in-memory DBs).
     """
 
-    def __init__(self, database: str | Path = ":memory:", *, read_only: bool = False):
-        self._conn = duckdb.connect(str(database), read_only=read_only)
+    def __init__(
+        self,
+        database: str | Path = ":memory:",
+        *,
+        read_only: bool = False,
+        pool_size: int = 1,
+    ):
         self._dialect = "duckdb"
+        self._conns: List[duckdb.DuckDBPyConnection] = [
+            duckdb.connect(str(database), read_only=read_only)
+            for _ in range(pool_size)
+        ]
+        self._pool: "Queue[duckdb.DuckDBPyConnection]" = Queue()
+        for conn in self._conns:
+            self._pool.put(conn)
 
     # ------------------------------------------------------------------ #
     # BaseEngine interface                                               #
@@ -57,10 +70,13 @@ class DuckDBEngine(BaseEngine):
         """
         if isinstance(sql, exp.Expression):
             sql = sql.sql(dialect=self._dialect, pretty=False)
+        conn = self._pool.get()
         try:
-            return self._conn.execute(str(sql)).fetchdf()
+            return conn.execute(str(sql)).fetchdf()
         except Exception as exc:  # pragma: no cover
             raise RuntimeError(f"DuckDB query failed: {sql}\n{exc}") from exc
+        finally:
+            self._pool.put(conn)
 
     def run_many(self, sql_statements: Sequence[str | exp.Expression]):  # noqa: D401
         """
@@ -89,30 +105,38 @@ class DuckDBEngine(BaseEngine):
         if "." in table:
             schema, t = table.rsplit(".", 1)
 
-        pragma = f"PRAGMA table_info('{schema}.{t}')" if schema else f"PRAGMA table_info('{t}')"
-        df = self._conn.execute(pragma).fetchdf()
-        return df["name"].tolist()
+        pragma = (
+            f"PRAGMA table_info('{schema}.{t}')" if schema else f"PRAGMA table_info('{t}')"
+        )
+        conn = self._pool.get()
+        try:
+            df = conn.execute(pragma).fetchdf()
+            return df["name"].tolist()
+        finally:
+            self._pool.put(conn)
 
     def get_dialect(self) -> str:  # noqa: D401
         return self._dialect
 
     def close(self):  # noqa: D401
-        with contextlib.suppress(Exception):
-            self._conn.close()
+        for conn in self._conns:
+            with contextlib.suppress(Exception):
+                conn.close()
 
     # ------------------------------------------------------------------ #
     # Convenience helpers                                                #
     # ------------------------------------------------------------------ #
     @property
     def connection(self) -> duckdb.DuckDBPyConnection:  # pragma: no cover
-        """Expose the raw DuckDB connection (useful in notebooks)."""
-        return self._conn
+        """Expose one DuckDB connection (first in the pool)."""
+        return self._conns[0]
 
     def register_dataframe(self, name: str, df: pd.DataFrame) -> None:
         """Register *df* as a DuckDB view for ad-hoc testing."""
-        self._conn.register(name, df)
+        for conn in self._conns:
+            conn.register(name, df)
 
     def __repr__(self) -> str:  # pragma: no cover
-        db_name = getattr(self._conn, "database_name", ":memory:")
-        loc = ":memory:" if db_name == ":memory:" else Path(db_name).name
+        sample = self._conns[0]
+        loc = ":memory:" if sample.database_name == ":memory:" else Path(sample.database_name).name
         return f"<DuckDBEngine db={loc!r}>"
