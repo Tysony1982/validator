@@ -108,6 +108,12 @@ class ExpectationSuiteConfig(BaseModel):
             return cls.from_json(path)
         raise ValueError(f"Unsupported config extension: {ext}")
 
+    # round-trip helper ----------------------------
+    def to_yaml(self) -> str:
+        """Serialize this config back to YAML."""
+        data = self.model_dump(exclude_defaults=True, exclude_none=True)
+        return yaml.safe_dump(data, sort_keys=False)
+
 
 class SLAConfig(BaseModel):
     """Group multiple expectation suites under a single SLA."""
@@ -146,6 +152,12 @@ class SLAConfig(BaseModel):
         if ext == ".json":
             return cls.from_json(path)
         raise ValueError(f"Unsupported config extension: {ext}")
+
+    # round-trip helper ----------------------------
+    def to_yaml(self) -> str:
+        """Serialize this SLA config back to YAML."""
+        data = self.model_dump(exclude_defaults=True, exclude_none=True)
+        return yaml.safe_dump(data, sort_keys=False)
 
 
 # --------------------------------------------------------------------------- #
