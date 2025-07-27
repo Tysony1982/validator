@@ -4,3 +4,4 @@ sqlglot
 pydantic
 PyYAML
 pytest
+faker
