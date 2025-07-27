@@ -38,6 +38,8 @@ class DuckDBEngine(BaseEngine):
         for an ephemeral one.
     read_only : bool, default False
         Open the database in read-only mode (ignored for in-memory DBs).
+    pool_size : int, default 1
+        Number of connections to keep in the internal pool.
     """
 
     def __init__(
@@ -47,6 +49,8 @@ class DuckDBEngine(BaseEngine):
         read_only: bool = False,
         pool_size: int = 1,
     ):
+        if pool_size < 1:
+            raise ValueError("pool_size must be >= 1")
         self._dialect = "duckdb"
         self._conns: List[duckdb.DuckDBPyConnection] = [
             duckdb.connect(str(database), read_only=read_only)
@@ -80,9 +84,11 @@ class DuckDBEngine(BaseEngine):
 
     def run_many(self, sql_statements: Sequence[str | exp.Expression]):  # noqa: D401
         """
-        Execute *multiple* statements in one round-trip by chaining them
-        with semicolons.  Falls back to parent default if an individual
-        statement returns a result set (rare for our use-case).
+        Execute *sql_statements* sequentially and collect the results.
+
+        DuckDB only returns a single result set when multiple statements are
+        chained together, so we simply loop over the statements and call
+        :py:meth:`run_sql` for each one.
         """
         if not sql_statements:
             return []

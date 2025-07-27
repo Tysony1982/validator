@@ -1,4 +1,5 @@
 import sys
+import yaml
 import src.expectations.validators.column as column_mod
 
 from src.expectations.config.expectation import SLAConfig
@@ -39,3 +40,12 @@ def test_sla_build_validators(tmp_path):
     validators = list(cfg.build_validators())
     assert len(validators) == 2
     assert isinstance(validators[0][2], ColumnNotNull)
+
+
+def test_to_yaml_round_trip(tmp_path):
+    original = _sample_yaml()
+    path = tmp_path / "sla.yml"
+    path.write_text(original)
+    cfg = SLAConfig.from_yaml(path)
+    dumped = cfg.to_yaml()
+    assert yaml.safe_load(original) == yaml.safe_load(dumped)

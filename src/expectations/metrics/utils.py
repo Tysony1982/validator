@@ -5,7 +5,7 @@ from sqlglot import exp, parse_one, ParseError
 from src.expectations.errors import ValidationConfigError
 
 # ------------------------------------------------------------------ #
-# 1️⃣  Build a bullet-proof "bad node" tuple                         #
+#   Build a bullet-proof "bad node" tuple                         #
 # ------------------------------------------------------------------ #
 _DDL_NODE_NAMES = (
     # canonical names (exist in >=27)
@@ -23,7 +23,7 @@ _BAD_NODE_TYPES = tuple(
 )
 
 # ------------------------------------------------------------------ #
-# 2️⃣  Fallback bool-expr tester for nodes that lack .is_boolean      #
+#   Fallback bool-expr tester for nodes that lack .is_boolean      #
 # ------------------------------------------------------------------ #
 _FALLBACK_BOOLEAN_NODES = (
     exp.And, exp.Or, exp.Not,
@@ -37,7 +37,7 @@ def _is_boolean(expr: exp.Expression) -> bool:
     return flag if flag is not None else isinstance(expr, _FALLBACK_BOOLEAN_NODES)
 
 # ------------------------------------------------------------------ #
-# 3️⃣  Public validator                                              #
+#   Public validator                                              #
 # ------------------------------------------------------------------ #
 def validate_filter_sql(sql: str) -> exp.Expression:
     """

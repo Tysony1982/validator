@@ -315,3 +315,63 @@ class ColumnGreaterEqual(ColumnMetricValidator):
         else:
             self.invalid_cnt = int(value)
         return self.invalid_cnt == 0
+
+
+class MetricDriftValidator(ColumnMetricValidator):
+    """Detect drift in any registered metric via rolling z-score."""
+
+    _metric_key = None  # filled at runtime
+
+    def __init__(
+        self,
+        *,
+        column: str | None,
+        metric: str,
+        window: int = 20,
+        z_thresh: float = 3.0,
+        result_store,
+        **kw,
+    ):
+        from src.expectations.metrics.registry import available_metrics
+
+        if metric not in available_metrics():
+            raise ValueError(f"Unknown metric {metric}")
+        self._metric_key = metric
+        super().__init__(column=column or "*", **kw)
+        self.window = window
+        self.z_thresh = z_thresh
+        self._store = result_store
+
+    def interpret(self, value) -> bool:
+        cur = float(value)
+
+        q = """
+            SELECT CAST(value AS DOUBLE) AS v
+            FROM statistics
+            WHERE table_name = ?
+              AND column_name IS NOT DISTINCT FROM ?
+              AND metric = ?
+            ORDER BY rowid DESC
+            LIMIT ?
+        """
+        col = None if self.column == "*" else self.column
+        hist = (
+            self._store.connection.execute(
+                q,
+                (
+                    getattr(self, "table", None),
+                    col,
+                    self._metric_key,
+                    self.window,
+                ),
+            ).fetchdf()["v"]
+        )
+        if len(hist) < 5:
+            self.details = {"skipped": "insufficient history"}
+            return True
+
+        mu = float(hist.mean())
+        sigma = float(hist.std())
+        z = 0 if sigma == 0 else abs((cur - mu) / sigma)
+        self.details = {"mean": mu, "std": sigma, "z": z}
+        return z <= self.z_thresh

@@ -65,8 +65,44 @@ class MetricBatchBuilder:
 
         filter_exp = validate_filter_sql(filter_sql)
 
-        # COUNT(*) or COUNT(col) → SUM(CASE WHEN condition THEN 1 END)
+        # COUNT aggregates have several special cases
         if isinstance(expr, exp.Count):
+            arg = expr.args.get("this")
+
+            # COUNT(DISTINCT col) -> COUNT(DISTINCT CASE WHEN cond THEN col END)
+            if isinstance(arg, exp.Distinct):
+                new_distinct = arg.copy()
+                new_exprs = [
+                    exp.Case().when(filter_exp, e) for e in arg.expressions
+                ]
+                new_distinct.set("expressions", new_exprs)
+                expr = expr.copy()
+                expr.set("this", new_distinct)
+                return expr
+
+            # COUNT(CASE WHEN col IS NULL THEN NULL ELSE 1 END)
+            if isinstance(arg, exp.Case):
+                # Detect a simple non-null counting CASE expression
+                if (
+                    len(arg.args.get("ifs", [])) == 1
+                    and isinstance(arg.args["ifs"][0], exp.If)
+                    and isinstance(arg.args["ifs"][0].this, exp.Is)
+                    and isinstance(arg.args["ifs"][0].this.expression, exp.Null)
+                    and isinstance(arg.args["ifs"][0].args.get("true"), exp.Null)
+                    and isinstance(arg.args.get("default"), exp.Literal)
+                    and not arg.args["default"].is_string
+                    and arg.args["default"].this == "1"
+                ):
+                    not_null_cond = exp.Not(this=arg.args["ifs"][0].this)
+                    condition = exp.and_(filter_exp, not_null_cond)
+                    case_expr = exp.Case().when(condition, exp.Literal.number(1))
+                    return exp.Count(this=case_expr)
+
+                # Otherwise, wrap entire CASE in another conditional
+                wrapped_case = exp.Case().when(filter_exp, arg.copy())
+                return exp.Count(this=wrapped_case)
+
+            # COUNT(*) or COUNT(col) → SUM(CASE WHEN condition THEN 1 END)
             case_expr = exp.Case().when(filter_exp, exp.Literal.number(1))
             return exp.Sum(this=case_expr)
 

@@ -43,6 +43,8 @@ class ValidationRunner:
 
         # Split upfront
         for eng_key, table, v in bindings:
+            # expose table on the validator for contextual logic
+            setattr(v, "table", table)
             if v.kind() == "metric":
                 metric_groups[(eng_key, table)].append(v)
             else:

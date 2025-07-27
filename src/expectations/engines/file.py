@@ -14,12 +14,24 @@ from .duckdb import DuckDBEngine
 
 
 class FileEngine(BaseEngine):
-    """Expose one or more data files as a SQL table via DuckDB."""
+    """Expose one or more data files as a SQL table via DuckDB.
 
-    def __init__(self, path: str | Path, *, table: str = "t", database: str | Path = ":memory:"):
+    Parameters
+    ----------
+    path : str | Path
+        File path or glob pointing to the data files.
+    table : str, default "t"
+        Name of the view exposing the files.
+    database : str | Path, optional
+        DuckDB database for the underlying engine.
+    pool_size : int, default 1
+        Passed through to :class:`DuckDBEngine`.
+    """
+
+    def __init__(self, path: str | Path, *, table: str = "t", database: str | Path = ":memory:", pool_size: int = 1):
         self.path = str(path)
         self.table = table
-        self._duck = DuckDBEngine(database)
+        self._duck = DuckDBEngine(database, pool_size=pool_size)
         # Register view pointing to the file path or glob
         quoted_path = self.path.replace("'", "''")
         self._duck.run_sql(f"CREATE VIEW {self.table} AS SELECT * FROM '{quoted_path}'")

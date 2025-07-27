@@ -1,6 +1,7 @@
+import json
 import pandas as pd
 
-from src.expectations.store import DuckDBResultStore
+from src.expectations.store import DuckDBResultStore, FileResultStore
 from src.expectations.engines.duckdb import DuckDBEngine
 from src.expectations.runner import ValidationRunner
 from src.expectations.validators.column import ColumnNotNull
@@ -36,6 +37,33 @@ def test_duckdb_store_persist(tmp_path):
     assert df_runs.loc[0, "engine_name"] == "duck"
     assert df_results.loc[0, "engine_name"] == "duck"
     assert bool(df_results.loc[0, "success"]) is True
+
+
+def test_file_store_persist(tmp_path):
+    engine = DuckDBEngine()
+    store = FileResultStore(tmp_path)
+
+    engine.register_dataframe("t", pd.DataFrame({"a": [1]}))
+    runner = ValidationRunner({"duck": engine})
+
+    run, _ = run_validations(
+        suite_name="suite1",
+        bindings=[("duck", "t", ColumnNotNull(column="a"))],
+        runner=runner,
+        store=store,
+    )
+
+    run_file = tmp_path / "runs" / f"{run.run_id}.json"
+    res_file = tmp_path / "results" / f"{run.run_id}.jsonl"
+
+    assert run_file.exists()
+    assert res_file.exists()
+
+    data = json.loads(run_file.read_text())
+    assert data["engine_name"] == "duck"
+    results = [json.loads(line) for line in res_file.read_text().splitlines()]
+    assert len(results) == 1
+    assert results[0]["engine_name"] == "duck"
 
 
 def test_duckdb_store_persist_sla(tmp_path):

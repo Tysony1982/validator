@@ -22,6 +22,20 @@ You can supply your own SQL and have the runner fail when that query returns row
 
 The validator will attach `error_row_count` and a sample of rows to the validation result.
 
+## Hooking Up New Validators
+
+New validator classes live in the `src/expectations/validators` package.
+If you create a new module (for example `foreign_key.py`) you can reference
+its classes from expectation configs either by dotted path
+
+```yaml
+expectation_type: foreign_key.ForeignKeyValidator
+```
+
+or by adding the module name to `src/expectations/validators/__init__.py` so
+that it is loaded automatically.  In that case the class can be referred to
+just by its name.
+
 ## Validating Files Directly
 
 The `FileEngine` exposes one or more files as a regular SQL table backed by DuckDB.
@@ -70,17 +84,22 @@ suites:
 ## Persisting Validation Results
 
 Validation results can be stored for later analysis using pluggable stores.
-The `DuckDBResultStore` writes run metadata and results into a DuckDB
-database:
+Two built-in options are provided:
+
+* `DuckDBResultStore` writes run metadata and results into a DuckDB
+  database.
+* `FileResultStore` dumps JSON files to a directory on disk.
 
 ```python
 from src.expectations.engines.duckdb import DuckDBEngine
-from src.expectations.store import DuckDBResultStore
+from src.expectations.store import DuckDBResultStore, FileResultStore
 from src.expectations.runner import ValidationRunner
 from src.expectations.result_model import RunMetadata
 
 engine = DuckDBEngine("results.db")
 store = DuckDBResultStore(engine)
+# or persist to plain files
+file_store = FileResultStore("/tmp/results")
 runner = ValidationRunner({"duck": DuckDBEngine()})
 run = RunMetadata(suite_name="demo", sla_name="nightly")
 results = runner.run(bindings, run_id=run.run_id)
