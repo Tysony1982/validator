@@ -84,9 +84,11 @@ class DuckDBEngine(BaseEngine):
 
     def run_many(self, sql_statements: Sequence[str | exp.Expression]):  # noqa: D401
         """
-        Execute *multiple* statements in one round-trip by chaining them
-        with semicolons.  Falls back to parent default if an individual
-        statement returns a result set (rare for our use-case).
+        Execute *sql_statements* sequentially and collect the results.
+
+        DuckDB only returns a single result set when multiple statements are
+        chained together, so we simply loop over the statements and call
+        :py:meth:`run_sql` for each one.
         """
         if not sql_statements:
             return []
