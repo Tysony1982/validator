@@ -1,0 +1,6 @@
+pandas
+duckdb
+sqlglot
+pydantic
+PyYAML
+pytest
