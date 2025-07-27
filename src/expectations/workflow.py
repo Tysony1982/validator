@@ -35,12 +35,12 @@ def run_validations(
         suite_name=suite_name,
         sla_name=sla_config.sla_name if sla_config else None,
         engine_name=engine_name,
-        schema=schema,
+        db_schema=schema,
     )
     results = runner.run(bindings, run_id=run.run_id)
     for r in results:
         r.engine_name = run.engine_name
-        r.schema = run.schema
+        r.db_schema = run.db_schema
     run.finished_at = datetime.utcnow()
     store.persist_run(run, results, sla_config)
     return run, results

@@ -14,4 +14,16 @@ class MetricStat(BaseModel):
     metric: str
     value: Any
     engine_name: Optional[str] = None
-    schema: Optional[str] = None
+    db_schema: Optional[str] = None
+
+    # ------------------------------------------------------------------
+    # Backwards compatibility alias
+    # ------------------------------------------------------------------
+    @property
+    def schema(self) -> Optional[str]:
+        """Alias for :attr:`db_schema` for backwards compatibility."""
+        return self.db_schema
+
+    @schema.setter
+    def schema(self, value: Optional[str]) -> None:  # pragma: no cover - simple
+        self.db_schema = value

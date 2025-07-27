@@ -19,9 +19,21 @@ class RunMetadata(BaseModel):
     suite_name: str
     sla_name: Optional[str] = None
     engine_name: Optional[str] = None
-    schema: Optional[str] = None
+    db_schema: Optional[str] = None
     started_at: datetime = Field(default_factory=datetime.utcnow)
     finished_at: Optional[datetime] = None
+
+    # ------------------------------------------------------------------
+    # Backwards compatibility alias
+    # ------------------------------------------------------------------
+    @property
+    def schema(self) -> Optional[str]:
+        """Alias for :attr:`db_schema` for backwards compatibility."""
+        return self.db_schema
+
+    @schema.setter
+    def schema(self, value: Optional[str]) -> None:  # pragma: no cover - simple
+        self.db_schema = value
 
     class Config:
         json_encoders = {datetime: lambda dt: dt.isoformat()}
@@ -32,7 +44,7 @@ class ValidationResult(BaseModel):
     validator: str
     table: str
     engine_name: Optional[str] = None
-    schema: Optional[str] = None
+    db_schema: Optional[str] = None
     column: Optional[str] = None
     metric: Optional[str] = None
     success: bool
@@ -40,3 +52,15 @@ class ValidationResult(BaseModel):
     severity: str = "FAIL"
     filter_sql: Optional[str] = None
     details: Dict[str, Any] = Field(default_factory=dict)
+
+    # ------------------------------------------------------------------
+    # Backwards compatibility alias
+    # ------------------------------------------------------------------
+    @property
+    def schema(self) -> Optional[str]:
+        """Alias for :attr:`db_schema` for backwards compatibility."""
+        return self.db_schema
+
+    @schema.setter
+    def schema(self, value: Optional[str]) -> None:  # pragma: no cover - simple
+        self.db_schema = value
