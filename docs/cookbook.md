@@ -22,6 +22,20 @@ You can supply your own SQL and have the runner fail when that query returns row
 
 The validator will attach `error_row_count` and a sample of rows to the validation result.
 
+## Hooking Up New Validators
+
+New validator classes live in the `src/expectations/validators` package.
+If you create a new module (for example `foreign_key.py`) you can reference
+its classes from expectation configs either by dotted path
+
+```yaml
+expectation_type: foreign_key.ForeignKeyValidator
+```
+
+or by adding the module name to `src/expectations/validators/__init__.py` so
+that it is loaded automatically.  In that case the class can be referred to
+just by its name.
+
 ## Validating Files Directly
 
 The `FileEngine` exposes one or more files as a regular SQL table backed by DuckDB.

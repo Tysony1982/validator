@@ -164,26 +164,27 @@ class SLAConfig(BaseModel):
 # Internal helpers                                                            #
 # --------------------------------------------------------------------------- #
 def _resolve_validator_class(name: str) -> type[ValidatorBase]:
-    """
-    Resolve *name* (e.g. "ColumnNotNull") to an actual class.
+    """Resolve *name* (e.g. ``ColumnNotNull``) to an actual class."""
 
-    Strategy:
-      1. Look in `src.expectations.validators` sub-modules already imported.
-      2. Fallback to dynamic import.
-    """
-    # optimistic: already in sys.modules
+    pkg_root = "src.expectations.validators"
+
+    # 1) try modules already imported
     for mod_name in list(sys.modules):
-        if mod_name.startswith("src.expectations.validators."):
+        if mod_name.startswith(f"{pkg_root}."):
             mod = sys.modules[mod_name]
             if hasattr(mod, name):
                 return getattr(mod, name)
 
-    # fallback – import checker modules lazily
+    # 2) attempt well-known sub-packages
+    for sub in ("column", "table", "custom"):
+        mod = import_module(f"{pkg_root}.{sub}")
+        if hasattr(mod, name):
+            return getattr(mod, name)
+
+    # 3) final fallback – dotted path supplied
     parts = name.split(".")
     if len(parts) == 1:
-        # assume it's in the default column module
-        mod = import_module("src.expectations.validators.column")
-        return getattr(mod, name)
+        raise AttributeError(f"Validator class {name} not found")
     *pkg, cls_name = parts
     mod = import_module(".".join(pkg))
     return getattr(mod, cls_name)
