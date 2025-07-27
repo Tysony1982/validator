@@ -27,16 +27,16 @@ def test_sql_compiles_and_runs():
     df = eng.run_sql(sql)
     assert set(df.columns) == {"rc", "dc"}
 
-def test_apply_filter_generates_case_sum():
-    req = MetricRequest(column='*', metric='row_cnt', alias='rc', filter_sql='a > 1')
-    builder = MetricBatchBuilder(table='t', requests=[req], dialect='duckdb')
+def test_apply_filter_generates_conditional_aggregates():
+    req = MetricRequest(column="*", metric="row_cnt", alias="rc", filter_sql="a > 1")
+    builder = MetricBatchBuilder(table="t", requests=[req], dialect="duckdb")
     sql = builder.sql()
     assert "CASE WHEN a > 1" in sql
-    assert "SUM" in sql
+    assert "SUM(CASE WHEN a > 1 THEN 1 END)" in sql
 
-    req2 = MetricRequest(column='a', metric='max', alias='mx', filter_sql='b < 5')
-    builder2 = MetricBatchBuilder(table='t', requests=[req2], dialect='duckdb')
+    req2 = MetricRequest(column="a", metric="max", alias="mx", filter_sql="b < 5")
+    builder2 = MetricBatchBuilder(table="t", requests=[req2], dialect="duckdb")
     sql2 = builder2.sql()
     assert "CASE WHEN b < 5" in sql2
-    assert "MAX(a)" in sql2
+    assert "MAX(CASE WHEN b < 5 THEN a END)" in sql2
 

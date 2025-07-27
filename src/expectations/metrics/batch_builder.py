@@ -61,15 +61,35 @@ class MetricBatchBuilder:
             return expr
 
         filter_exp = parse_one(filter_sql)
-        # COUNT expressions do not support FILTER in older sqlglot versions, so
-        # always fall back to a SUM(CASE WHEN …) wrapper.
+
+        # COUNT(*) or COUNT(col) → SUM(CASE WHEN condition THEN 1 END)
         if isinstance(expr, exp.Count):
-            body = exp.Literal.number(1)
-        else:
-            body = expr
-        return exp.func(
-            "SUM",
-            exp.Case().when(filter_exp, body).else_(exp.null()),
+            case_expr = exp.Case().when(filter_exp, exp.Literal.number(1))
+            return exp.Sum(this=case_expr)
+
+        # MIN/MAX/AVG/STDDEV → aggregate(CASE WHEN condition THEN arg END)
+        if isinstance(
+            expr,
+            (
+                exp.Min,
+                exp.Max,
+                exp.Avg,
+                exp.Stddev,
+                exp.StddevSamp,
+                exp.StddevPop,
+            ),
+        ):
+            new_arg = (
+                exp.Case()
+                .when(filter_exp, expr.args.get("this"))
+            )
+            expr = expr.copy()
+            expr.set("this", new_arg)
+            return expr
+
+        # Fallback: wrap entire expression in SUM(CASE WHEN … END)
+        return exp.Sum(
+            this=exp.Case().when(filter_exp, expr.copy())
         )
 
     # ------------------------------------------------------------------ #
