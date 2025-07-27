@@ -1,6 +1,6 @@
 """
-validator.metrics.batch_builder
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src.expectations.metrics.batch_builder
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Creates **one** SELECT statement that evaluates *n* metric expressions
 and aliases them with the validator's unique runtime IDs.  Dialect

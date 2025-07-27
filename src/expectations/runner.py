@@ -1,6 +1,6 @@
 """
-validator.runner
-~~~~~~~~~~~~~~~~
+src.expectations.runner
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Single entry-point that executes both *metric* and *custom* validators.
 """

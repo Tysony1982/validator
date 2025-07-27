@@ -47,8 +47,6 @@ expectations:
 """
     path = tmp_path / "suite.yml"
     path.write_text(yaml_content)
-    sys.modules.setdefault("validator.validators.custom", sys.modules[SqlErrorRowsValidator.__module__])
-    sys.modules.setdefault("validator.validators.column", sys.modules[ColumnNotNull.__module__])
     cfg = ExpectationSuiteConfig.from_yaml(path)
     runner = ValidationRunner({"duck": eng})
     results = runner.run(cfg.build_validators())

@@ -1,6 +1,6 @@
 """
-validator.config.expectation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src.expectations.config.expectation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Pydantic models that describe an *expectation suite* and a helper that
 translates it into concrete `ValidatorBase` instances.
@@ -156,12 +156,12 @@ def _resolve_validator_class(name: str) -> type[ValidatorBase]:
     Resolve *name* (e.g. "ColumnNotNull") to an actual class.
 
     Strategy:
-      1. Look in `validator.validators` sub-modules already imported.
+      1. Look in `src.expectations.validators` sub-modules already imported.
       2. Fallback to dynamic import.
     """
     # optimistic: already in sys.modules
     for mod_name in list(sys.modules):
-        if mod_name.startswith("validator.validators."):
+        if mod_name.startswith("src.expectations.validators."):
             mod = sys.modules[mod_name]
             if hasattr(mod, name):
                 return getattr(mod, name)
@@ -170,7 +170,7 @@ def _resolve_validator_class(name: str) -> type[ValidatorBase]:
     parts = name.split(".")
     if len(parts) == 1:
         # assume it's in the default column module
-        mod = import_module("validator.validators.column")
+        mod = import_module("src.expectations.validators.column")
         return getattr(mod, name)
     *pkg, cls_name = parts
     mod = import_module(".".join(pkg))
