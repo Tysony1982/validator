@@ -12,7 +12,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Sequence
 
-from sqlglot import exp, parse_one, select
+from sqlglot import exp, select
+
+from src.expectations.errors import ValidationConfigError
+from src.expectations.metrics.utils import validate_filter_sql
 
 from src.expectations.metrics.registry import get_metric, available_metrics
 
@@ -60,7 +63,7 @@ class MetricBatchBuilder:
         if not filter_sql:
             return expr
 
-        filter_exp = parse_one(filter_sql)
+        filter_exp = validate_filter_sql(filter_sql)
 
         # COUNT(*) or COUNT(col) → SUM(CASE WHEN condition THEN 1 END)
         if isinstance(expr, exp.Count):
