@@ -1,6 +1,6 @@
 """
-validator.validators.table
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+src.expectations.validators.table
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Table-level validators.
 

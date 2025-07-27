@@ -1,6 +1,6 @@
 """
-validator.metrics.registry
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+src.expectations.metrics.registry
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Global **metric registry** mapping a *metric key* (e.g. ``"null_pct"``)
 to a *builder* – a callable that receives a **column name** and returns a

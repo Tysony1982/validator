@@ -36,7 +36,6 @@ def test_sla_build_validators(tmp_path):
     path = tmp_path / "sla.yml"
     path.write_text(_sample_yaml())
     cfg = SLAConfig.from_yaml(path)
-    sys.modules.setdefault("validator.validators.column", column_mod)
     validators = list(cfg.build_validators())
     assert len(validators) == 2
     assert isinstance(validators[0][2], ColumnNotNull)
