@@ -1,6 +1,6 @@
 """
-validator.validators.column
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src.expectations.validators.column
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Ready-to-use **column-level** validators that integrate with the new
 batch-execution architecture.
@@ -8,7 +8,7 @@ batch-execution architecture.
 * All classes inherit :class:`ColumnMetricValidator` which implements
   the boilerplate for metric-type validators.
 * Each validator registers (or re-uses) a metric key in
-  ``validator.metrics.registry`` and provides `interpret()` logic.
+  ``src.expectations.metrics.registry`` and provides `interpret()` logic.
 
 New metrics added here:
     - ``min``      → MIN(column)

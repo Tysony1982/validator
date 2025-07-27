@@ -51,7 +51,6 @@ expectations:
     path = tmp_path / "suite.yml"
     path.write_text(yaml_content)
     cfg = ExpectationSuiteConfig.from_yaml(path)
-    sys.modules.setdefault("validator.validators.column", column_mod)
     validators = list(cfg.build_validators())
     assert len(validators) == 1
     _, _, v = validators[0]
@@ -96,7 +95,6 @@ from src.expectations.validators.table import RowCountValidator
 
 
 def test_resolve_validator_class(monkeypatch):
-    sys.modules.setdefault("validator.validators.column", column_mod)
     cls = _resolve_validator_class("ColumnNotNull")
     assert cls is ColumnNotNull
     cls2 = _resolve_validator_class(

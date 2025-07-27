@@ -1,8 +1,8 @@
 """
-validator.engines.duckdb
-~~~~~~~~~~~~~~~~~~~~~~~~
+src.expectations.engines.duckdb
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Concrete implementation of :class:`validator.engines.base.BaseEngine`
+Concrete implementation of :class:`src.expectations.engines.base.BaseEngine`
 for an embedded DuckDB database.  Perfect for unit-tests, local
 experimentation, and small-scale production jobs.
 

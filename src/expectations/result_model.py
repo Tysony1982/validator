@@ -1,6 +1,6 @@
 """
-validator.result_models
-~~~~~~~~~~~~~~~~~~~~~~~
+src.expectations.result_model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Typed artefacts passed from runner to downstream stores / reporters.
 """
