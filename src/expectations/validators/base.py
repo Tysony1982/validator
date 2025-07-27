@@ -30,7 +30,12 @@ class ValidatorBase(ABC):
     # ------------------------------------------------------------------ #
     def __init__(self, *, where: str | None = None):
         self.where_condition: Optional[str] = where
-        self.runtime_id: str = f"v_{uuid.uuid4().hex[:8]}"
+        # Use the full 128-bit UUID to minimize collision probability.
+        #
+        # The chance of a clash among one million instances is
+        # approximately 1.5e-27 when using all 32 hex digits, far below
+        # the 1e-18 threshold.
+        self.runtime_id: str = f"v_{uuid.uuid4().hex}"
 
     # ------------------------------------------------------------------ #
     # Classification                                                     #
