@@ -131,6 +131,26 @@ def test_column_greater_equal():
     v = ColumnGreaterEqual(column="b", other_column="a")
     assert _run(eng, "t", v).success is False
 
+
+def test_column_min_where_clause():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [1, 3], "b": [0, 1]})
+    eng.register_dataframe("t", df)
+    v_pass = ColumnMin(column="a", min_value=3, where="b = 1")
+    assert _run(eng, "t", v_pass).success is True
+    v_fail = ColumnMin(column="a", min_value=2, where="b = 0")
+    assert _run(eng, "t", v_fail).success is False
+
+
+def test_column_max_where_clause():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [3, 10], "b": [0, 1]})
+    eng.register_dataframe("t", df)
+    v_pass = ColumnMax(column="a", max_value=3, where="b = 0")
+    assert _run(eng, "t", v_pass).success is True
+    v_fail = ColumnMax(column="a", max_value=5, where="b = 1")
+    assert _run(eng, "t", v_fail).success is False
+
 def test_where_clause_filters_rows():
     eng = DuckDBEngine()
     df = pd.DataFrame({"a": [1, None], "b": [0, 1]})
