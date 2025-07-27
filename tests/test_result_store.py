@@ -1,8 +1,10 @@
 import pandas as pd
 
-from src.expectations.result_model import RunMetadata, ValidationResult
 from src.expectations.store import DuckDBResultStore
 from src.expectations.engines.duckdb import DuckDBEngine
+from src.expectations.runner import ValidationRunner
+from src.expectations.validators.column import ColumnNotNull
+from src.expectations.workflow import run_validations
 
 
 def test_duckdb_store_persist(tmp_path):
@@ -16,20 +18,15 @@ def test_duckdb_store_persist(tmp_path):
     store.connection.execute("DELETE FROM runs")
     store.connection.execute("DELETE FROM results")
 
-    run = RunMetadata(suite_name="suite1")
-    results = [
-        ValidationResult(
-            run_id=run.run_id,
-            validator="ColumnNotNull",
-            table="t",
-            column="a",
-            metric="null_pct",
-            success=True,
-            value=0.0,
-        )
-    ]
+    engine.register_dataframe("t", pd.DataFrame({"a": [1]}))
+    runner = ValidationRunner({"duck": engine})
 
-    store.persist_run(run, results)
+    run, _ = run_validations(
+        suite_name="suite1",
+        bindings=[("duck", "t", ColumnNotNull(column="a"))],
+        runner=runner,
+        store=store,
+    )
 
     df_runs = store.connection.execute("SELECT * FROM runs").fetchdf()
     df_results = store.connection.execute("SELECT * FROM results").fetchdf()
@@ -50,19 +47,6 @@ def test_duckdb_store_persist_sla(tmp_path):
     store.connection.execute("DELETE FROM results")
     store.connection.execute("DELETE FROM slas")
 
-    run = RunMetadata(suite_name="suite1", sla_name="sla1")
-    results = [
-        ValidationResult(
-            run_id=run.run_id,
-            validator="ColumnNotNull",
-            table="t",
-            column="a",
-            metric="null_pct",
-            success=True,
-            value=0.0,
-        )
-    ]
-
     from src.expectations.config.expectation import SLAConfig, ExpectationSuiteConfig
 
     sla_cfg = SLAConfig(
@@ -70,7 +54,16 @@ def test_duckdb_store_persist_sla(tmp_path):
         suites=[ExpectationSuiteConfig(suite_name="suite1", engine="duck", table="t", expectations=[])]
     )
 
-    store.persist_run(run, results, sla_cfg)
+    engine.register_dataframe("t", pd.DataFrame({"a": [1]}))
+    runner = ValidationRunner({"duck": engine})
+
+    run, _ = run_validations(
+        suite_name="suite1",
+        bindings=[("duck", "t", ColumnNotNull(column="a"))],
+        runner=runner,
+        store=store,
+        sla_config=sla_cfg,
+    )
 
     df_runs = store.connection.execute("SELECT * FROM runs").fetchdf()
     df_slas = store.connection.execute("SELECT * FROM slas").fetchdf()
