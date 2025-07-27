@@ -6,3 +6,4 @@ PyYAML
 pytest
 pytest-xdist
 faker
+hypothesis
