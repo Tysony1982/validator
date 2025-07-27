@@ -137,6 +137,11 @@ class DuckDBEngine(BaseEngine):
             conn.register(name, df)
 
     def __repr__(self) -> str:  # pragma: no cover
+
+        #db_name = getattr(self._conn, "database_name", ":memory:")
+        #loc = ":memory:" if db_name == ":memory:" else Path(db_name).name
+
         sample = self._conns[0]
         loc = ":memory:" if sample.database_name == ":memory:" else Path(sample.database_name).name
+
         return f"<DuckDBEngine db={loc!r}>"
