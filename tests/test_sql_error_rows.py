@@ -10,7 +10,7 @@ from src.expectations.config.expectation import ExpectationSuiteConfig
 
 def _run(eng, table, validator):
     runner = ValidationRunner({"duck": eng})
-    return runner.run([("duck", table, validator)])[0]
+    return runner.run([("duck", table, validator)], run_id="test")[0]
 
 
 def test_sql_error_rows_pass():
@@ -49,6 +49,6 @@ expectations:
     path.write_text(yaml_content)
     cfg = ExpectationSuiteConfig.from_yaml(path)
     runner = ValidationRunner({"duck": eng})
-    results = runner.run(cfg.build_validators())
+    results = runner.run(cfg.build_validators(), run_id="test")
     assert len(results) == 2
 
