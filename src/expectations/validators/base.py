@@ -12,7 +12,8 @@ The runner handles both transparently.
 
 from __future__ import annotations
 
-import uuid
+import os
+import ulid
 from abc import ABC, abstractmethod
 from typing import Literal, Optional
 
@@ -30,7 +31,8 @@ class ValidatorBase(ABC):
     # ------------------------------------------------------------------ #
     def __init__(self, *, where: str | None = None):
         self.where_condition: Optional[str] = where
-        self.runtime_id: str = f"v_{uuid.uuid4().hex[:8]}"
+        # ULID string is 26 chars -> "v<pid>_<ulid>" still well under 63 chars
+        self.runtime_id: str = f"v{os.getpid()}_{ulid.new().str}"
 
     # ------------------------------------------------------------------ #
     # Classification                                                     #
