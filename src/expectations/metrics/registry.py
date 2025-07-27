@@ -21,6 +21,7 @@ key           | meaning                               | expression
 
 from __future__ import annotations
 
+import threading
 from typing import Callable, Dict, Tuple
 
 from sqlglot import exp, parse_one
@@ -30,57 +31,66 @@ from sqlglot import exp, parse_one
 # --------------------------------------------------------------------------- #
 MetricBuilder = Callable[[str], exp.Expression]
 
-# --------------------------------------------------------------------------- #
-# Internal registry dictionary                                                #
-# --------------------------------------------------------------------------- #
-_METRICS: Dict[str, MetricBuilder] = {}
+
+class MetricRegistry:
+    """Thread-safe singleton registry of metric builders."""
+
+    _instance: "MetricRegistry | None" = None
+    _instance_lock = threading.RLock()
+
+    def __init__(self) -> None:
+        self._metrics: Dict[str, MetricBuilder] = {}
+        self._lock = threading.RLock()
+
+    @classmethod
+    def instance(cls) -> "MetricRegistry":
+        if cls._instance is None:
+            with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
+
+    # ------------------------------------------------------------------ #
+    # Public API                                                        #
+    # ------------------------------------------------------------------ #
+    def register(self, name: str, builder: MetricBuilder) -> None:
+        with self._lock:
+            if name in self._metrics:
+                raise KeyError(f"Metric key '{name}' already registered")
+            self._metrics[name] = builder
+
+    def get(self, name: str) -> MetricBuilder:
+        with self._lock:
+            try:
+                return self._metrics[name]
+            except KeyError as exc:  # pragma: no cover
+                raise KeyError(
+                    f"Unknown metric key '{name}'. Available: {', '.join(sorted(self._metrics))}"
+                ) from exc
+
+    def keys(self) -> Tuple[str, ...]:
+        with self._lock:
+            return tuple(self._metrics)
 
 
 # --------------------------------------------------------------------------- #
-# Helper functions                                                             #
+# Helper functions wrapping the singleton                                      #
 # --------------------------------------------------------------------------- #
 def register_metric(name: str) -> Callable[[MetricBuilder], MetricBuilder]:
-    """
-    Decorator that registers a *metric builder* under **name**.
-
-    Example
-    -------
-    >>> @register_metric("non_null_cnt")
-    ... def _non_null_cnt(col):
-    ...     return sqlglot.exp.Count(
-    ...         sqlglot.exp.Case().when(sqlglot.exp.column(col).is_(sqlglot.exp.null()), None).else_(1)
-    ...     )
-    """
-
     def _decorator(fn: MetricBuilder) -> MetricBuilder:
-        if name in _METRICS:
-            raise KeyError(f"Metric key '{name}' already registered")
-        _METRICS[name] = fn
+        MetricRegistry.instance().register(name, fn)
         return fn
 
     return _decorator
 
 
 def get_metric(name: str) -> MetricBuilder:
-    """
-    Return the builder registered for *name*.
-
-    Raises
-    ------
-    KeyError
-        If *name* is unknown.
-    """
-    try:
-        return _METRICS[name]
-    except KeyError as exc:  # pragma: no cover
-        raise KeyError(
-            f"Unknown metric key '{name}'. " f"Available: {', '.join(sorted(_METRICS))}"
-        ) from exc
+    return MetricRegistry.instance().get(name)
 
 
 def available_metrics() -> Tuple[str, ...]:
     """Return a **tuple** of all registered metric keys (read-only)."""
-    return tuple(_METRICS)
+    return MetricRegistry.instance().keys()
 
 
 # ------------------------------------------------------------------ #
