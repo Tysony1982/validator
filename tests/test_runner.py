@@ -71,3 +71,13 @@ def test_error_propagation(monkeypatch):
     res = runner.run([("duck", "t", FaultyValidator())], run_id="test")[0]
     assert res.success is False
     assert "error" in res.details
+    assert "traceback" in res.details
+
+def test_metric_error_capture():
+    eng = DuckDBEngine()
+    runner = ValidationRunner({"duck": eng})
+    res = runner.run([("duck", "missing", ColumnNotNull(column="a"))], run_id="test")[0]
+    assert res.success is False
+    assert "error" in res.details
+    assert "traceback" in res.details
+
