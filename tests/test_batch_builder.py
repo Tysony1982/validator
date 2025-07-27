@@ -1,7 +1,9 @@
 import pandas as pd
+import pytest
 from sqlglot import select
 
 from src.expectations.metrics.batch_builder import MetricBatchBuilder, MetricRequest
+from src.expectations.errors import ValidationConfigError
 from src.expectations.engines.duckdb import DuckDBEngine
 
 
@@ -39,4 +41,24 @@ def test_apply_filter_generates_conditional_aggregates():
     sql2 = builder2.sql()
     assert "CASE WHEN b < 5" in sql2
     assert "MAX(CASE WHEN b < 5 THEN a END)" in sql2
+
+
+def test_query_ast_compiles_multiple_dialects():
+    reqs = [
+        MetricRequest(column="a", metric="row_cnt", alias="rc"),
+        MetricRequest(column="a", metric="distinct_cnt", alias="dc"),
+    ]
+    builder = MetricBatchBuilder(table="t", requests=reqs)
+    ast = builder.build_query_ast()
+
+    for dialect in ["duckdb", "postgres", "snowflake"]:
+        ast.sql(dialect=dialect, pretty=False)
+
+
+
+def test_malicious_filter_rejected():
+    req = MetricRequest(column="a", metric="row_cnt", alias="rc", filter_sql="1; DROP TABLE x")
+    builder = MetricBatchBuilder(table="t", requests=[req])
+    with pytest.raises(ValidationConfigError):
+        builder.sql()
 

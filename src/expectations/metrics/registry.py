@@ -23,7 +23,8 @@ from __future__ import annotations
 
 from typing import Callable, Dict, Tuple
 
-from sqlglot import exp, parse_one
+from sqlglot import exp
+from src.expectations.metrics.utils import validate_filter_sql
 
 # --------------------------------------------------------------------------- #
 # Public typing alias                                                         #
@@ -157,9 +158,10 @@ def pct_where(predicate_sql: str) -> MetricBuilder:
     """Return a metric builder for ``pct_where`` using *predicate_sql*."""
 
     def _builder(_: str) -> exp.Expression:
+        condition = validate_filter_sql(predicate_sql)
         case_expr = (
             exp.Case()
-            .when(parse_one(predicate_sql), exp.Literal.number(1))
+            .when(condition, exp.Literal.number(1))
             .else_(exp.Literal.number(0))
         )
         sum_true = exp.Sum(this=case_expr)
