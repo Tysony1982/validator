@@ -1,5 +1,14 @@
 # Cookbook
 
+## Installation
+
+Install the dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
+
+
 ## Writing Custom Rules
 
 You can supply your own SQL and have the runner fail when that query returns rows.
