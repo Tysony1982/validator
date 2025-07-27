@@ -1,5 +1,6 @@
 import json
 import tempfile
+import yaml
 import pytest
 
 from src.expectations.config.expectation import ExpectationSuiteConfig
@@ -55,6 +56,22 @@ expectations:
     assert len(validators) == 1
     _, _, v = validators[0]
     assert isinstance(v, ColumnNotNull)
+
+
+def test_to_yaml_round_trip(tmp_path):
+    yaml_content = """
+suite_name: s
+engine: duck
+table: t
+expectations:
+  - expectation_type: ColumnNotNull
+    column: a
+"""
+    path = tmp_path / "suite.yml"
+    path.write_text(yaml_content)
+    cfg = ExpectationSuiteConfig.from_yaml(path)
+    dumped = cfg.to_yaml()
+    assert yaml.safe_load(yaml_content) == yaml.safe_load(dumped)
 
 
 def test_from_file_yaml_and_json(tmp_path):
