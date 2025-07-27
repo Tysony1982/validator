@@ -16,7 +16,7 @@ def _worker(i: int) -> bool:
         from sqlglot import exp
         return exp.column(col)
 
-    eng = DuckDBEngine(pool_size=2)
+    eng = DuckDBEngine(pool_size=4)
     eng.register_dataframe("t", pd.DataFrame({"a": [1, 2]}))
     runner = ValidationRunner({"duck": eng})
     res = runner.run([("duck", "t", ColumnNotNull(column="a"))], run_id=f"test_{i}")[0]
