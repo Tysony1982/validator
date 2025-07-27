@@ -26,11 +26,21 @@ def run_validations(
     ``sla_config`` can be provided when the run is associated with an SLA.
     """
 
+    engine_name = bindings[0][0] if bindings else None
+    schema = None
+    if bindings and "." in bindings[0][1]:
+        schema = bindings[0][1].rsplit(".", 1)[0]
+
     run = RunMetadata(
         suite_name=suite_name,
         sla_name=sla_config.sla_name if sla_config else None,
+        engine_name=engine_name,
+        schema=schema,
     )
     results = runner.run(bindings, run_id=run.run_id)
+    for r in results:
+        r.engine_name = run.engine_name
+        r.schema = run.schema
     run.finished_at = datetime.utcnow()
     store.persist_run(run, results, sla_config)
     return run, results

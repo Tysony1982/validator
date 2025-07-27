@@ -36,6 +36,8 @@ class DuckDBResultStore(BaseResultStore):
                 run_id TEXT PRIMARY KEY,
                 suite_name TEXT,
                 sla_name TEXT REFERENCES slas(sla_name),
+                engine_name TEXT,
+                schema TEXT,
                 started_at TIMESTAMP,
                 finished_at TIMESTAMP
             )
@@ -48,6 +50,8 @@ class DuckDBResultStore(BaseResultStore):
                 validator TEXT,
                 table_name TEXT,
                 column_name TEXT,
+                engine_name TEXT,
+                schema TEXT,
                 metric TEXT,
                 success BOOLEAN,
                 value TEXT,
@@ -73,23 +77,27 @@ class DuckDBResultStore(BaseResultStore):
                 (run.sla_name, json.dumps(sla_config.model_dump())),
             )
         self._engine.connection.execute(
-            "INSERT INTO runs VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 run.run_id,
                 run.suite_name,
                 run.sla_name,
+                run.engine_name,
+                run.schema,
                 run.started_at,
                 run.finished_at,
             ),
         )
         for r in results:
             self._engine.connection.execute(
-                "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     r.run_id,
                     r.validator,
                     r.table,
                     r.column,
+                    r.engine_name,
+                    r.schema,
                     r.metric,
                     r.success,
                     r.value,
