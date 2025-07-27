@@ -50,3 +50,21 @@ class SqlErrorRowsValidator(ValidatorBase):
             "error_rows_sample": df.head(self.max_error_rows).to_dict("records"),
         }
         return self.error_row_count == 0
+
+
+class ColumnZScoreOutlierRowsValidator(SqlErrorRowsValidator):
+    """Return rows where ``ABS((col - μ)/σ)`` exceeds ``z_thresh``."""
+
+    def __init__(self, *, column: str, z_thresh: float = 3.0, max_error_rows: int = 20, **kw):
+        sql = f"""
+        WITH stats AS (
+            SELECT AVG({column}) AS mu, STDDEV_SAMP({column}) AS sigma FROM {{table}}
+        )
+        SELECT * FROM {{table}}, stats
+        WHERE sigma > 0
+          AND ABS(({column} - mu) / sigma) > {z_thresh}
+        """
+        super().__init__(sql=sql, max_error_rows=max_error_rows, **kw)
+
+    def custom_sql(self, table: str):
+        return self.sql_text.format(table=table)
