@@ -35,7 +35,7 @@ expectations:
 
     cfg = ExpectationSuiteConfig.from_yaml(path)
     runner = ValidationRunner({"duck": eng})
-    results = runner.run(cfg.build_validators())
+    results = runner.run(cfg.build_validators(), run_id="test")
     statuses = [r.success for r in results]
     assert statuses == [True, False, False, True]
     assert results[0].filter_sql == "a >= 2"

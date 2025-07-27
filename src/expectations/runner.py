@@ -15,7 +15,7 @@ from sqlglot import exp
 
 from src.expectations.engines.base import BaseEngine
 from src.expectations.metrics.batch_builder import MetricBatchBuilder
-from src.expectations.result_model import ValidationResult
+from src.expectations.result_model import ValidationResult, RunMetadata
 from src.expectations.validators.base import ValidatorBase
 
 # --------------------------------------------------------------------------- #
@@ -34,7 +34,7 @@ class ValidationRunner:
     # ------------------------------------------------------------------ #
     # Public API                                                         #
     # ------------------------------------------------------------------ #
-    def run(self, bindings: Sequence[ValidatorBinding]) -> List[ValidationResult]:
+    def run(self, bindings: Sequence[ValidatorBinding], *, run_id: str) -> List[ValidationResult]:
         metric_groups: Dict[Tuple[str, str], List[ValidatorBase]] = defaultdict(list)
         custom_bindings: List[ValidatorBinding] = []
 
@@ -64,7 +64,7 @@ class ValidationRunner:
                     ok = v.interpret(val)
                     results.append(
                         ValidationResult(
-                            run_id="",  # set by caller
+                            run_id=run_id,
                             validator=v.__class__.__name__,
                             table=table,
                             column=getattr(v, "column", None),
@@ -78,7 +78,7 @@ class ValidationRunner:
                 for v in validators:
                     results.append(
                         ValidationResult(
-                            run_id="",
+                            run_id=run_id,
                             validator=v.__class__.__name__,
                             table=table,
                             column=getattr(v, "column", None),
@@ -109,7 +109,7 @@ class ValidationRunner:
             details = base_details if ok else {**base_details, "error": err}
             results.append(
                 ValidationResult(
-                    run_id="",
+                    run_id=run_id,
                     validator=v.__class__.__name__,
                     table=table,
                     column=getattr(v, "column", None),
@@ -169,5 +169,6 @@ if __name__ == "__main__":  # pragma: no cover
             return float(value) == 0.0
 
     bindings = [("duck", "t", ColumnNullPct("a"))]
-    vr = ValidationRunner({"duck": eng}).run(bindings)
+    run = RunMetadata(suite_name="demo")
+    vr = ValidationRunner({"duck": eng}).run(bindings, run_id=run.run_id)
     print(vr)

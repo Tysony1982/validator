@@ -11,7 +11,7 @@ from src.expectations.validators.table import (
 
 def _run(eng, table, validator):
     runner = ValidationRunner({"duck": eng})
-    return runner.run([("duck", table, validator)])[0]
+    return runner.run([("duck", table, validator)], run_id="test")[0]
 
 
 def test_row_count_bounds():

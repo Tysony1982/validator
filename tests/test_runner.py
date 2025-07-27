@@ -38,7 +38,7 @@ def test_metric_grouping(monkeypatch):
         ("duck", "t", ColumnNotNull(column="a")),
         ("duck", "t", ColumnNullPct(column="a", max_null_pct=1.0)),
     ]
-    runner.run(bindings)
+    runner.run(bindings, run_id="test")
     assert len(calls) == 1
 
 
@@ -59,7 +59,7 @@ def test_metric_and_custom_calls(monkeypatch):
         ("duck", "t", ColumnNotNull(column="a")),
         ("duck", "t", DuplicateRowValidator(key_columns=["a"])),
     ]
-    runner.run(bindings)
+    runner.run(bindings, run_id="test")
     assert len(calls) == 2
 
 
@@ -68,6 +68,6 @@ def test_error_propagation(monkeypatch):
     eng.register_dataframe("t", pd.DataFrame({"a": [1]}))
 
     runner = ValidationRunner({"duck": eng})
-    res = runner.run([("duck", "t", FaultyValidator())])[0]
+    res = runner.run([("duck", "t", FaultyValidator())], run_id="test")[0]
     assert res.success is False
     assert "error" in res.details
