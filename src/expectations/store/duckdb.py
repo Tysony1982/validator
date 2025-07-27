@@ -9,6 +9,7 @@ from src.expectations.config.expectation import SLAConfig
 import duckdb
 
 from src.expectations.result_model import RunMetadata, ValidationResult
+from src.expectations.stats import MetricStat
 from .base import BaseResultStore
 from src.expectations.engines.duckdb import DuckDBEngine
 
@@ -61,6 +62,22 @@ class DuckDBResultStore(BaseResultStore):
             )
             """
         )
+        self._engine.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS statistics(
+                run_id TEXT,
+                table_name TEXT,
+                column_name TEXT,
+                engine_name TEXT,
+                schema TEXT,
+                metric TEXT,
+                value TEXT
+            )
+            """
+        )
+        self._engine.connection.execute(
+            "CREATE INDEX IF NOT EXISTS stats_lookup ON statistics(engine_name, schema, table_name, column_name, metric)"
+        )
 
     # ------------------------------------------------------------------ #
     # BaseResultStore interface
@@ -104,6 +121,25 @@ class DuckDBResultStore(BaseResultStore):
                     r.severity,
                     r.filter_sql,
                     json.dumps(r.details),
+                ),
+            )
+
+    def persist_stats(
+        self, run: RunMetadata, stats: Sequence["MetricStat"]
+    ) -> None:
+        """Persist statistics for a run."""
+
+        for s in stats:
+            self._engine.connection.execute(
+                "INSERT INTO statistics VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    s.run_id,
+                    s.table,
+                    s.column,
+                    s.engine_name or run.engine_name,
+                    s.schema or run.schema,
+                    s.metric,
+                    s.value,
                 ),
             )
 

@@ -88,3 +88,27 @@ results = runner.run(bindings, run_id=run.run_id)
 sla_cfg = SLAConfig(sla_name="nightly", suites=[])
 store.persist_run(run, results, sla_cfg)
 ```
+
+## Collecting Table Statistics
+
+`TableStatsCollector` computes basic metrics for every column using the same
+metric builders that power the validators. Statistics can be persisted alongside
+validation results and later queried to derive reasonable thresholds or SLOs.
+
+```python
+from src.expectations.stats import TableStatsCollector
+from src.expectations.store import DuckDBResultStore
+from src.expectations.engines.duckdb import DuckDBEngine
+from src.expectations.result_model import RunMetadata
+
+engine = DuckDBEngine()
+store = DuckDBResultStore(engine)
+collector = TableStatsCollector({"duck": engine})
+
+run = RunMetadata(suite_name="stats_demo")
+stats = collector.collect("duck", "orders", run_id=run.run_id)
+store.persist_stats(run, stats)
+```
+
+Persisted statistics are indexed by engine, schema, table and column which makes
+looking up historical ranges for a given column trivial.
