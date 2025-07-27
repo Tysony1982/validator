@@ -19,7 +19,7 @@ def _worker(i: int) -> bool:
     eng = DuckDBEngine(pool_size=2)
     eng.register_dataframe("t", pd.DataFrame({"a": [1, 2]}))
     runner = ValidationRunner({"duck": eng})
-    res = runner.run([("duck", "t", ColumnNotNull(column="a"))])[0]
+    res = runner.run([("duck", "t", ColumnNotNull(column="a"))], run_id=f"test_{i}")[0]
 
     # cleanup
     registry.MetricRegistry.instance()._metrics.pop(name, None)
