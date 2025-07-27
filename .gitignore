@@ -7,3 +7,5 @@ src/expectations/engines/__pycache__/
 
 # Local IDE configuration
 settings.json
+
+.hypothesis
