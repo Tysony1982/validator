@@ -62,3 +62,21 @@ def test_malicious_filter_rejected():
     with pytest.raises(ValidationConfigError):
         builder.sql()
 
+
+def test_filtered_distinct_and_non_null_counts():
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [1, None, 2, 3], "b": [1, 1, 0, 1]})
+    eng.register_dataframe("t", df)
+
+    req1 = MetricRequest(column="a", metric="distinct_cnt", alias="dc", filter_sql="b = 1")
+    req2 = MetricRequest(column="a", metric="non_null_cnt", alias="nn", filter_sql="b = 1")
+
+    builder = MetricBatchBuilder(table="t", requests=[req1, req2], dialect="duckdb")
+    sql = builder.sql()
+    df_res = eng.run_sql(sql)
+
+    assert df_res.loc[0, "dc"] == 2
+    assert df_res.loc[0, "nn"] == 2
+    assert "COUNT(DISTINCT CASE WHEN b = 1 THEN a END)" in sql
+    assert "COUNT(CASE WHEN b = 1 AND NOT a IS NULL THEN 1 END)" in sql
+
