@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from src.expectations.engines.duckdb import DuckDBEngine
 from src.expectations.runner import ValidationRunner
@@ -54,6 +55,24 @@ def test_column_distinct_count_ops():
     for op, expected in cases:
         res = _run(eng, "t", ColumnDistinctCount(column="a", expected=3, op=op))
         assert res.success is expected
+
+
+@pytest.mark.parametrize(
+    "op, expected",
+    [
+        ("==", True),
+        (">=", True),
+        ("<=", True),
+        (">", False),
+        ("<", False),
+    ],
+)
+def test_column_distinct_count_parametrized(op, expected):
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [1, 1, 2, 3]})
+    eng.register_dataframe("t", df)
+    res = _run(eng, "t", ColumnDistinctCount(column="a", expected=3, op=op))
+    assert res.success is expected
 
 
 def test_column_min_max_strict_vs_inclusive():

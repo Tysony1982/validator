@@ -117,7 +117,16 @@ class ColumnDistinctCount(ColumnMetricValidator):
 
     def interpret(self, value) -> bool:
         self.distinct_cnt = int(value)
-        return eval(f"{self.distinct_cnt} {self.op} {self.expected}")  # noqa: S307
+        if self.op == "==":
+            return self.distinct_cnt == self.expected
+        if self.op == ">=":
+            return self.distinct_cnt >= self.expected
+        if self.op == "<=":
+            return self.distinct_cnt <= self.expected
+        if self.op == ">":
+            return self.distinct_cnt > self.expected
+        # self.op must be "<" by constructor validation
+        return self.distinct_cnt < self.expected
 
 
 class ColumnMin(ColumnMetricValidator):
