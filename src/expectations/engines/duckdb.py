@@ -38,6 +38,8 @@ class DuckDBEngine(BaseEngine):
         for an ephemeral one.
     read_only : bool, default False
         Open the database in read-only mode (ignored for in-memory DBs).
+    pool_size : int, default 1
+        Number of connections to keep in the internal pool.
     """
 
     def __init__(
@@ -47,6 +49,8 @@ class DuckDBEngine(BaseEngine):
         read_only: bool = False,
         pool_size: int = 1,
     ):
+        if pool_size < 1:
+            raise ValueError("pool_size must be >= 1")
         self._dialect = "duckdb"
         self._conns: List[duckdb.DuckDBPyConnection] = [
             duckdb.connect(str(database), read_only=read_only)
