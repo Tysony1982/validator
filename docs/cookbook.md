@@ -70,17 +70,22 @@ suites:
 ## Persisting Validation Results
 
 Validation results can be stored for later analysis using pluggable stores.
-The `DuckDBResultStore` writes run metadata and results into a DuckDB
-database:
+Two built-in options are provided:
+
+* `DuckDBResultStore` writes run metadata and results into a DuckDB
+  database.
+* `FileResultStore` dumps JSON files to a directory on disk.
 
 ```python
 from src.expectations.engines.duckdb import DuckDBEngine
-from src.expectations.store import DuckDBResultStore
+from src.expectations.store import DuckDBResultStore, FileResultStore
 from src.expectations.runner import ValidationRunner
 from src.expectations.result_model import RunMetadata
 
 engine = DuckDBEngine("results.db")
 store = DuckDBResultStore(engine)
+# or persist to plain files
+file_store = FileResultStore("/tmp/results")
 runner = ValidationRunner({"duck": DuckDBEngine()})
 run = RunMetadata(suite_name="demo", sla_name="nightly")
 results = runner.run(bindings, run_id=run.run_id)
