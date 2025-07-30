@@ -10,3 +10,6 @@ hypothesis
 ulid-py
 fastapi
 uvicorn
+streamlit
+streamlit-ace
+requests
