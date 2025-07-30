@@ -25,3 +25,11 @@ make docs
 This will generate HTML documentation under `docs/_build`. In particular
 `docs/validators.html` lists all available validator classes with their
 signatures and docstrings.
+
+## Service Module
+
+The optional ``validator.service`` package exposes a small FastAPI application
+that lets you manage expectation suites and trigger runs through HTTP. Results
+are read from the configured ``BaseResultStore`` so any of the included stores
+can be plugged in. The service is intended as a foundation for building a
+custom UI or automation around validation workflows.
