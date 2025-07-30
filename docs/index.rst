@@ -5,3 +5,4 @@ Validator Documentation
    :maxdepth: 2
 
    validators
+   streamlit
