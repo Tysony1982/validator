@@ -77,7 +77,13 @@ def test_duckdb_store_persist_sla(tmp_path):
     store.connection.execute("DELETE FROM results")
     store.connection.execute("DELETE FROM slas")
 
-    from src.expectations.config.expectation import SLAConfig, ExpectationSuiteConfig
+    import os
+    import sys
+    try:
+        from src.expectations.config.expectation import SLAConfig, ExpectationSuiteConfig
+    except ImportError:  # pragma: no cover - dev dependency
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+        from src.expectations.config.expectation import SLAConfig, ExpectationSuiteConfig
 
     sla_cfg = SLAConfig(
         sla_name="sla1",

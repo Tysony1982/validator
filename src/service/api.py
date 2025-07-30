@@ -4,10 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import List
+import os
+import sys
 
 from fastapi import FastAPI, HTTPException
 
-from src.expectations.config.expectation import ExpectationSuiteConfig
+try:
+    from src.expectations.config.expectation import ExpectationSuiteConfig
+except ImportError:  # pragma: no cover - dev dependency
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+    from src.expectations.config.expectation import ExpectationSuiteConfig
 from src.expectations.runner import ValidationRunner
 from src.expectations.store.base import BaseResultStore
 from src.expectations.workflow import run_validations

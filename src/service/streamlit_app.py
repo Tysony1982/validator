@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import os
-from typing import List
+import sys
+from typing import List, Dict, Any
+from pathlib import Path
+import json
 
 import pandas as pd
 import requests
 import streamlit as st
 import sys
+
+from .widgets import widget_for
 
 try:  # optional dependency used for nicer YAML editing
     from streamlit_ace import st_ace  # type: ignore
@@ -29,6 +34,14 @@ SERVICE_URL = os.getenv("SERVICE_URL", "http://localhost:8000")
 
 DUCKDB_PATH = os.getenv("RESULT_DB")
 """Optional path to a DuckDB database for read-only history lookup."""
+
+# Load validator field metadata for form generation
+_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "validators.json"
+try:
+    with open(_SCHEMA_PATH, "r") as fh:
+        VALIDATOR_SCHEMA: Dict[str, Dict[str, Any]] = json.load(fh)
+except FileNotFoundError:  # pragma: no cover - demo scenario
+    VALIDATOR_SCHEMA = {}
 
 
 @st.cache_data(show_spinner=False)
@@ -92,6 +105,17 @@ def _trigger_run(suite_name: str) -> None:
     resp.raise_for_status()
 
 
+def build_validator_form(validator: str) -> Dict[str, Any]:
+    """Render input widgets for *validator* based on ``VALIDATOR_SCHEMA``."""
+
+    fields = VALIDATOR_SCHEMA.get(validator, {})
+    values: Dict[str, Any] = {}
+    for name, meta in fields.items():
+        widget_key = f"{validator}-{name}"
+        values[name] = widget_for(name, meta, widget_key)
+    return values
+
+
 def page_runs() -> None:
     st.header("Validation Runs")
     # NOTE: ``st.autorefresh`` was renamed to ``st_autorefresh`` in newer
@@ -125,6 +149,18 @@ def page_runs() -> None:
             st.info("No results found")
         else:
             st.dataframe(res, use_container_width=True)
+
+
+def page_form_demo() -> None:
+    """Demonstrate dynamic form generation for a validator."""
+
+    st.header("Validator Form Demo")
+    validator = st.selectbox("Validator", sorted(VALIDATOR_SCHEMA.keys()))
+    with st.form("validator_form"):
+        values = build_validator_form(validator)
+        submitted = st.form_submit_button("Submit")
+    if submitted:
+        st.json(values)
 
 
 def page_editor() -> None:
@@ -161,11 +197,15 @@ def page_editor() -> None:
 
 def main() -> None:  # pragma: no cover - interactive
     st.title("Validator UI")
-    page = st.sidebar.selectbox("Page", ["Runs", "Suite Builder"])
+    page = st.sidebar.selectbox(
+        "Page", ["Runs", "Suite Builder", "Validator Demo"]
+    )
     if page == "Runs":
         page_runs()
-    else:
+    elif page == "Suite Builder":
         page_editor()
+    else:
+        page_form_demo()
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution

@@ -1,0 +1,17 @@
+{
+  "RowCountValidator": {
+    "min_rows": {"type": "number"},
+    "max_rows": {"type": "number"},
+    "where": {"type": "text"}
+  },
+  "SqlErrorRowsValidator": {
+    "sql": {"type": "text"},
+    "max_error_rows": {"type": "number"},
+    "severity": {"type": "choice", "options": ["INFO", "WARN", "FAIL"]}
+  },
+  "ColumnValueInSet": {
+    "column": {"type": "text"},
+    "allowed_values": {"type": "choice", "options": ["OPEN", "CLOSED"]},
+    "allow_null": {"type": "bool"}
+  }
+}
