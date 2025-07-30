@@ -79,7 +79,16 @@ def _trigger_run(suite_name: str) -> None:
 
 def page_runs() -> None:
     st.header("Validation Runs")
-    st.autorefresh(interval=30_000)
+    # NOTE: ``st.autorefresh`` was renamed to ``st_autorefresh`` in newer
+    # Streamlit versions. Importing the function directly keeps compatibility
+    # with older releases that may not expose it as a method on ``st``.
+    try:
+        from streamlit import st_autorefresh  # type: ignore
+    except Exception:  # pragma: no cover - missing in very old versions
+        st_autorefresh = None  # type: ignore
+
+    if st_autorefresh:
+        st_autorefresh(interval=30_000)
 
     df = _load_runs()
     if df.empty:
