@@ -9,3 +9,4 @@ src/expectations/engines/__pycache__/
 settings.json
 
 .hypothesis
+src/expectations/validators/validators.json
