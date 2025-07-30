@@ -8,3 +8,5 @@ pytest-xdist
 faker
 hypothesis
 ulid-py
+fastapi
+uvicorn
