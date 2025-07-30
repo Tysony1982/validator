@@ -8,6 +8,7 @@ from typing import List
 import pandas as pd
 import requests
 import streamlit as st
+import sys
 
 try:  # optional dependency used for nicer YAML editing
     from streamlit_ace import st_ace  # type: ignore
@@ -16,7 +17,11 @@ except Exception:  # pragma: no cover - dev dependency
 
 import duckdb
 
-from src.expectations.config.expectation import ExpectationSuiteConfig
+try:
+    from src.expectations.config.expectation import ExpectationSuiteConfig
+except ImportError:  # pragma: no cover - dev dependency
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+    from src.expectations.config.expectation import ExpectationSuiteConfig
 
 
 SERVICE_URL = os.getenv("SERVICE_URL", "http://localhost:8000")
