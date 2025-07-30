@@ -38,8 +38,13 @@ def _load_runs() -> pd.DataFrame:
         conn.close()
         return df
 
-    resp = requests.get(f"{SERVICE_URL}/runs")
-    resp.raise_for_status()
+    try:
+        resp = requests.get(f"{SERVICE_URL}/runs")
+        resp.raise_for_status()
+    except requests.exceptions.RequestException as exc:  # pragma: no cover - network failure
+        st.error(str(exc))
+        return pd.DataFrame()
+
     return pd.DataFrame(resp.json())
 
 
@@ -55,8 +60,13 @@ def _load_results(run_id: str) -> pd.DataFrame:
         conn.close()
         return df
 
-    resp = requests.get(f"{SERVICE_URL}/runs/{run_id}")
-    resp.raise_for_status()
+    try:
+        resp = requests.get(f"{SERVICE_URL}/runs/{run_id}")
+        resp.raise_for_status()
+    except requests.exceptions.RequestException as exc:  # pragma: no cover - network failure
+        st.error(str(exc))
+        return pd.DataFrame()
+
     return pd.DataFrame(resp.json())
 
 
@@ -106,7 +116,10 @@ def page_runs() -> None:
     run_id = st.selectbox("Show results for run", ["None"] + df["run_id"].tolist())
     if run_id and run_id != "None":
         res = _load_results(run_id)
-        st.dataframe(res, use_container_width=True)
+        if res.empty:
+            st.info("No results found")
+        else:
+            st.dataframe(res, use_container_width=True)
 
 
 def page_editor() -> None:
