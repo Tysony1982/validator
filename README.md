@@ -2,6 +2,42 @@
 
 Lightweight data validation utilities powered by DuckDB and sqlglot.
 
+## Quickstart
+
+Install the Python dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Create a small `service_app.py` to start the API:
+
+```python
+from validator.service import Service, SuiteStore
+from src.expectations.runner import ValidationRunner
+from src.expectations.engines.duckdb import DuckDBEngine
+from src.expectations.store import DuckDBResultStore
+
+runner = ValidationRunner({"duck": DuckDBEngine("example.db")})
+store = DuckDBResultStore(DuckDBEngine("results.db"))
+service = Service(runner, store, SuiteStore("suites"))
+app = service.app
+```
+
+Run the service with `uvicorn`:
+
+```bash
+uvicorn service_app:app --reload
+```
+
+Start the Streamlit UI in another terminal:
+
+```bash
+SERVICE_URL=http://localhost:8000 RESULT_DB=results.db \
+    streamlit run src/service/streamlit_app.py
+```
+
+
 ## Concurrency Model
 
 Metric registration and execution engines are safe to use from multiple threads.
