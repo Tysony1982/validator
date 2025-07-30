@@ -5,3 +5,5 @@
 # can quickly locate classes without the calling code needing to specify
 # dotted paths.
 from . import column, table, custom  # noqa: F401
+# Generate validator schema metadata on package import
+from . import schema  # noqa: F401
