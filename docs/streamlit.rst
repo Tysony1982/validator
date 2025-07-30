@@ -53,3 +53,34 @@ Implementation tips
      - ``from streamlit_ace import st_ace`` – returns YAML string
    * - Form ↔ Pydantic validation
      - ``ExpectationSuiteConfig.model_validate_yaml(text)`` to catch errors client-side
+
+Running the app
+---------------
+First start the FastAPI service which exposes suite management and run endpoints. A small example using the DuckDB result store::
+
+    from validator.service import Service, SuiteStore
+    from src.expectations.engines.duckdb import DuckDBEngine
+    from src.expectations.runner import ValidationRunner
+    from src.expectations.store import DuckDBResultStore
+
+    runner = ValidationRunner({"duck": DuckDBEngine("example.db")})
+    store = DuckDBResultStore(DuckDBEngine("results.db"))
+    service = Service(runner, store, SuiteStore("suites"))
+    app = service.app
+
+Launch the API with ``uvicorn``:
+
+.. code-block:: bash
+
+    uvicorn service_app:app --reload
+
+With the service running, open the Streamlit UI:
+
+.. code-block:: bash
+
+    SERVICE_URL=http://localhost:8000 \
+    RESULT_DB=results.db \
+    streamlit run src/service/streamlit_app.py
+
+``SERVICE_URL`` points to the service base URL while ``RESULT_DB`` allows the UI
+to read the DuckDB history directly.
