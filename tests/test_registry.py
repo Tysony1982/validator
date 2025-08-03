@@ -19,5 +19,11 @@ def test_register_metric_duplicate_key():
 
 def test_builtin_metric_retrieval():
     for name in registry.available_metrics():
-        expr = registry.get_metric(name)("col")
+        builder = registry.get_metric(name)
+        if name in {"set_overlap_pct", "missing_values_cnt", "extra_values_cnt"}:
+            with pytest.raises(ValueError):
+                builder("col")
+            expr = builder("col1", "col2")
+        else:
+            expr = builder("col")
         assert isinstance(expr, exp.Expression)
