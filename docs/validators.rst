@@ -1,6 +1,17 @@
 Validator Reference
 ===================
 
+The validator system is organized into categories that mirror the Python
+modules under ``src/expectations/validators``:
+
+* ``column`` – column-level checks such as :class:`ColumnNotNull`.
+* ``table`` – whole-table checks like :class:`RowCountValidator`.
+* ``custom`` – ad-hoc or user-defined SQL validators.
+* ``reconciliation`` – cross-table comparisons.
+
+Validators are executed by the :doc:`runner` and can emit useful
+:doc:`metrics` or participate in :doc:`reconciliation` workflows.
+
 ColumnDistinctCount
 -------------------
 
@@ -20,11 +31,13 @@ ColumnGreaterEqual
 
 Passes when ``column`` ≥ ``other_column`` row-wise.
 
-Example YAML::
+Example YAML:
 
-    - expectation_type: ColumnGreaterEqual
-      column: end_date
-      other_column: start_date
+.. code-block:: yaml
+
+   - expectation_type: ColumnGreaterEqual
+     column: end_date
+     other_column: start_date
 
 ColumnMatchesRegex
 ------------------
@@ -35,11 +48,13 @@ ColumnMatchesRegex
 
 Passes when every value matches ``pattern``.
 
-Example YAML::
+Example YAML:
 
-    - expectation_type: ColumnMatchesRegex
-      column: email
-      pattern: "^[A-Za-z]+@example.com$"
+.. code-block:: yaml
+
+   - expectation_type: ColumnMatchesRegex
+     column: email
+     pattern: "^[A-Za-z]+@example.com$"
 
 ColumnMax
 ---------
@@ -86,12 +101,75 @@ ColumnRange
 
 Passes when values fall between ``min_value`` and ``max_value``.
 
-Example YAML::
+Example YAML:
 
-    - expectation_type: ColumnRange
-      column: price
-      min_value: 0
-      max_value: 100
+.. code-block:: yaml
+
+   - expectation_type: ColumnRange
+     column: price
+     min_value: 0
+     max_value: 100
+
+ColumnReconciliationValidator
+-----------------------------
+
+**Signature**::
+
+    ColumnReconciliationValidator(column_map: 'ColumnMapping', primary_engine: 'BaseEngine', primary_table: 'str', comparer_engine: 'BaseEngine', comparer_table: 'str', where: 'str | None' = None, comparer_where: 'str | None' = None)
+
+Compare simple column metrics between two engines.
+
+The validator runs a set of basic metrics on the *primary* engine and the
+provided ``comparer_engine`` and succeeds when all metrics match exactly.
+
+Parameters
+----------
+column_map : :class:`~src.expectations.utils.mappings.ColumnMapping`
+    Mapping between the primary and comparer columns.  Allows name
+    remapping and value type conversions.
+primary_engine : BaseEngine
+    Engine for the primary table used for validation of the mapping.
+primary_table : str
+    Table name on the primary engine.
+comparer_engine : BaseEngine
+    Engine used for the comparison query.
+comparer_table : str
+    Table name on the comparer engine.
+where : str, optional
+    Optional SQL filter for the primary engine.
+comparer_where : str, optional
+    Optional SQL filter for the comparer engine.
+
+Examples
+--------
+Basic usage compares the same column on two engines::
+
+    mapping = ColumnMapping("a")
+    ColumnReconciliationValidator(
+        column_map=mapping,
+        primary_engine=primary,
+        primary_table="t1",
+        comparer_engine=comparer,
+        comparer_table="t2",
+    )
+
+Column mappings can rename and cast values::
+
+    mapping = ColumnMapping(
+        primary="id",
+        comparer="user_id",
+        comparer_type=int,
+    )
+    ColumnReconciliationValidator(
+        column_map=mapping,
+        primary_engine=primary,
+        primary_table="users",
+        comparer_engine=comparer,
+        comparer_table="users_copy",
+        where="active = 1",
+        comparer_where="status = 'active'",
+    )
+    <ColumnReconciliationValidator>
 
 ColumnValueInSet
 ----------------
@@ -102,11 +180,22 @@ ColumnValueInSet
 
 Passes when all values are within ``allowed_values``.
 
-Example YAML::
+Example YAML:
 
-    - expectation_type: ColumnValueInSet
-      column: status
-      allowed_values: [OPEN, CLOSED]
+.. code-block:: yaml
+
+   - expectation_type: ColumnValueInSet
+     column: status
+     allowed_values: [OPEN, CLOSED]
+
+ColumnZScoreOutlierRowsValidator
+--------------------------------
+
+**Signature**::
+
+    ColumnZScoreOutlierRowsValidator(column: 'str', z_thresh: 'float' = 3.0, max_error_rows: 'int' = 20, **kw)
+
+Return rows where ``ABS((col - μ)/σ)`` exceeds ``z_thresh``.
 
 DuplicateRowValidator
 ---------------------
@@ -121,6 +210,15 @@ Passes when the duplicate count == 0.
 
 *kind()* returns "custom" → executed in its own query.
 
+MetricDriftValidator
+--------------------
+
+**Signature**::
+
+    MetricDriftValidator(column: 'str | None', metric: 'str', window: 'int' = 20, z_thresh: 'float' = 3.0, result_store, **kw)
+
+Detect drift in any registered metric via rolling z-score.
+
 PrimaryKeyUniquenessValidator
 -----------------------------
 
@@ -130,10 +228,12 @@ PrimaryKeyUniquenessValidator
 
 Passes when the set of ``key_columns`` uniquely identifies each row.
 
-Example YAML::
+Example YAML:
 
-    - expectation_type: PrimaryKeyUniquenessValidator
-      key_columns: [id]
+.. code-block:: yaml
+
+   - expectation_type: PrimaryKeyUniquenessValidator
+     key_columns: [id]
 
 RowCountValidator
 -----------------
@@ -154,9 +254,50 @@ SqlErrorRowsValidator
 
 Run ad-hoc SQL that returns error rows.
 
-Example YAML::
+Example YAML:
 
-    - expectation_type: SqlErrorRows
-      sql: |
-        SELECT * FROM my_table WHERE bad_condition
-      max_error_rows: 10
+.. code-block:: yaml
+
+   - expectation_type: SqlErrorRows
+     sql: |
+       SELECT * FROM my_table WHERE bad_condition
+     max_error_rows: 10
+
+TableReconciliationValidator
+----------------------------
+
+**Signature**::
+
+    TableReconciliationValidator(comparer_engine: 'BaseEngine', comparer_table: 'str', where: 'str | None' = None, comparer_where: 'str | None' = None)
+
+Compare table row counts between two engines.
+
+Parameters
+----------
+comparer_engine : BaseEngine
+    Engine used for the comparison query.
+comparer_table : str
+    Table name on the comparer engine.
+where : str, optional
+    Optional SQL filter for the primary engine.
+comparer_where : str, optional
+    Optional SQL filter for the comparer engine.
+
+Examples
+--------
+Basic usage::
+
+    TableReconciliationValidator(
+        comparer_engine=comparer,
+        comparer_table="t2",
+    )
+
+Apply filters when validating a subset of rows::
+
+    TableReconciliationValidator(
+        comparer_engine=comparer,
+        comparer_table="t2",
+        where="active = 1",
+        comparer_where="status = 'active'",
+    )
+    <TableReconciliationValidator>
