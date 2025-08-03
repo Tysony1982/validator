@@ -1,5 +1,10 @@
 import pandas as pd
 import pytest
+import hypothesis.strategies as st
+from hypothesis import HealthCheck, given, settings
+from src.expectations.engines.duckdb import DuckDBEngine
+
+DuckDBEngine.__repr__ = lambda self: "<DuckDBEngine>"
 
 from src.expectations.validators.column import (
     ColumnNotNull,
@@ -159,3 +164,76 @@ def test_row_count_where_clause(duckdb_engine, validation_runner):
     v = RowCountValidator(min_rows=1, max_rows=1, where="b = 2")
     res = _run(validation_runner, "t", v)
     assert res.success is True
+
+
+# ---------------------------------------------------------------------------
+# Hypothesis-based property tests
+# ---------------------------------------------------------------------------
+
+
+@st.composite
+def range_with_edges(draw):
+    min_v = draw(st.integers(-1000, 1000))
+    max_v = draw(st.integers(min_v + 1, min_v + 1000))
+    inner = draw(st.lists(st.integers(min_v, max_v), min_size=1))
+    values = inner + [min_v, max_v]
+    return min_v, max_v, values
+
+
+@st.composite
+def strict_range_values(draw):
+    min_v = draw(st.integers(-1000, 1000))
+    max_v = draw(st.integers(min_v + 2, min_v + 1000))
+    values = draw(st.lists(st.integers(min_v + 1, max_v - 1), min_size=1))
+    return min_v, max_v, values
+
+
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    data=st.lists(st.one_of(st.none(), st.integers()), min_size=1),
+    max_null_pct=st.floats(
+        min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False
+    ),
+)
+def test_column_null_pct_property(
+    duckdb_engine, validation_runner, data, max_null_pct
+):
+    df = pd.DataFrame({"a": data})
+    duckdb_engine.register_dataframe("t", df)
+    validator = ColumnNullPct(column="a", max_null_pct=max_null_pct)
+    result = _run(validation_runner, "t", validator)
+    actual_null_pct = df["a"].isna().mean()
+    assert result.success == (actual_null_pct <= max_null_pct)
+    assert 0.0 <= validator.null_pct <= 1.0
+
+
+@given(
+    max_null_pct=st.floats(allow_nan=False, allow_infinity=False).filter(
+        lambda x: x < 0 or x > 1
+    )
+)
+def test_column_null_pct_invalid_bounds(max_null_pct):
+    with pytest.raises(ValueError):
+        ColumnNullPct(column="a", max_null_pct=max_null_pct)
+
+
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(range_with_edges())
+def test_column_range_strict_bounds(duckdb_engine, validation_runner, data):
+    min_v, max_v, values = data
+    df = pd.DataFrame({"a": values})
+    duckdb_engine.register_dataframe("t", df)
+    inclusive = ColumnRange(column="a", min_value=min_v, max_value=max_v)
+    strict = ColumnRange(column="a", min_value=min_v, max_value=max_v, strict=True)
+    assert _run(validation_runner, "t", inclusive).success is True
+    assert _run(validation_runner, "t", strict).success is False
+
+
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(strict_range_values())
+def test_column_range_strict_passes(duckdb_engine, validation_runner, data):
+    min_v, max_v, values = data
+    df = pd.DataFrame({"a": values})
+    duckdb_engine.register_dataframe("t", df)
+    strict = ColumnRange(column="a", min_value=min_v, max_value=max_v, strict=True)
+    assert _run(validation_runner, "t", strict).success is True
