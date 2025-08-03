@@ -2,14 +2,7 @@ import json
 import tempfile
 import yaml
 import pytest
-import os
-import sys
-
-try:
-    from src.expectations.config.expectation import ExpectationSuiteConfig
-except ImportError:  # pragma: no cover - dev dependency
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-    from src.expectations.config.expectation import ExpectationSuiteConfig
+from src.expectations.config.expectation import ExpectationSuiteConfig
 from src.expectations.validators.column import ColumnNotNull
 import src.expectations.validators.column as column_mod
 import src.expectations.config.expectation as expectation_mod

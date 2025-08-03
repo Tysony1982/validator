@@ -1,9 +1,7 @@
 """Simple Streamlit UI on top of the :mod:`validator.service` API."""
-
 from __future__ import annotations
 
 import os
-import sys
 from typing import List, Dict, Any
 from pathlib import Path
 import json
@@ -11,7 +9,6 @@ import json
 import pandas as pd
 import requests
 import streamlit as st
-import sys
 
 from .widgets import widget_for
 
@@ -22,11 +19,7 @@ except Exception:  # pragma: no cover - dev dependency
 
 import duckdb
 
-try:
-    from src.expectations.config.expectation import ExpectationSuiteConfig
-except ImportError:  # pragma: no cover - dev dependency
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-    from src.expectations.config.expectation import ExpectationSuiteConfig
+from ..expectations.config.expectation import ExpectationSuiteConfig
 
 
 SERVICE_URL = os.getenv("SERVICE_URL", "http://localhost:8000")

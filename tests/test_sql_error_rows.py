@@ -1,14 +1,8 @@
-import os
-import sys
 import pandas as pd
 
 from src.expectations.validators.custom import SqlErrorRowsValidator
 from src.expectations.validators.column import ColumnNotNull
-try:
-    from src.expectations.config.expectation import ExpectationSuiteConfig
-except ImportError:  # pragma: no cover - dev dependency
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-    from src.expectations.config.expectation import ExpectationSuiteConfig
+from src.expectations.config.expectation import ExpectationSuiteConfig
 
 
 def _run(runner, table, validator):
