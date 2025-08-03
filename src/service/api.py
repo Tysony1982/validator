@@ -30,13 +30,18 @@ class SuiteStore:
         return [p.stem for p in self.base_path.glob("*.yml")]
 
     def load(self, name: str) -> ExpectationSuiteConfig:
+        if "/" in name or "\\" in name or Path(name).name != name:
+            raise ValueError(f"Invalid suite name: {name}")
         path = self.base_path / f"{name}.yml"
         if not path.exists():
             raise FileNotFoundError(name)
         return ExpectationSuiteConfig.from_yaml(path)
 
     def save(self, suite: ExpectationSuiteConfig) -> None:
-        path = self.base_path / f"{suite.suite_name}.yml"
+        name = suite.suite_name
+        if "/" in name or "\\" in name or Path(name).name != name:
+            raise ValueError(f"Invalid suite name: {name}")
+        path = self.base_path / f"{name}.yml"
         path.write_text(suite.to_yaml())
 
 
