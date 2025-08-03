@@ -5,5 +5,6 @@ Validator Documentation
    :maxdepth: 2
 
    validators
+   runner
    streamlit
    cookbook
