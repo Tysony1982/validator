@@ -1,20 +1,18 @@
 import pandas as pd
 
-from src.expectations.engines.duckdb import DuckDBEngine
 from src.expectations.stats import TableStatsCollector
 from src.expectations.store import DuckDBResultStore
 from src.expectations.result_model import RunMetadata
 
 
-def test_collect_and_persist_stats(tmp_path):
-    eng = DuckDBEngine()
+def test_collect_and_persist_stats(duckdb_engine):
     df = pd.DataFrame({"a": [1, 2, None], "b": [5, 6, 7]})
-    eng.register_dataframe("t", df)
+    duckdb_engine.register_dataframe("t", df)
 
-    store = DuckDBResultStore(eng)
+    store = DuckDBResultStore(duckdb_engine)
     store.connection.execute("DELETE FROM statistics")
 
-    collector = TableStatsCollector({"duck": eng})
+    collector = TableStatsCollector({"duck": duckdb_engine})
     run = RunMetadata(suite_name="stats")
     stats = collector.collect("duck", "t", run_id=run.run_id)
     store.persist_stats(run, stats)
