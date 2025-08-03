@@ -28,6 +28,14 @@ def test_set_overlap_pct_mismatched_schema():
         _run_expr(eng, "t", expr)
 
 
+def test_set_overlap_pct_all_nulls():
+    eng = DuckDBEngine()
+    eng.register_dataframe("t", pd.DataFrame({"a": [None, None], "b": [None, None]}))
+    expr = get_metric("set_overlap_pct")("a", "b")
+    val = _run_expr(eng, "t", expr)
+    assert pd.isna(val)
+
+
 def test_set_overlap_pct_empty_table():
     eng = DuckDBEngine()
     eng.register_dataframe("t", pd.DataFrame({"a": [], "b": []}))

@@ -326,7 +326,10 @@ def set_overlap_pct(
     union_case = exp.Case().when(union_cond, exp.Literal.number(1))
     union_cnt = exp.Sum(this=union_case)
 
-    return exp.Div(this=inter_cnt, expression=union_cnt)
+    zero_union = exp.EQ(this=union_cnt.copy(), expression=exp.Literal.number(0))
+    div_expr = exp.Div(this=inter_cnt, expression=union_cnt.copy())
+
+    return exp.Case().when(zero_union, exp.null()).else_(div_expr)
 
 
 @register_metric("missing_values_cnt")
