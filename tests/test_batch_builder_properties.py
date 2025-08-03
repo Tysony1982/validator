@@ -17,7 +17,15 @@ simple_predicate = st.one_of(
 )
 
 filter_strategy = st.one_of(st.none(), simple_predicate)
-metric_strategy = st.sampled_from(available_metrics())
+# Metrics like set comparisons require multiple columns. The batch builder only
+# supports single-column metrics, so exclude those multi-column metrics from the
+# strategy.
+_single_col_metrics = [
+    m
+    for m in available_metrics()
+    if m not in {"set_overlap_pct", "missing_values_cnt", "extra_values_cnt"}
+]
+metric_strategy = st.sampled_from(_single_col_metrics)
 
 
 @given(metric=metric_strategy, filter_sql=filter_strategy)

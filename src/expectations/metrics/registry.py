@@ -283,15 +283,9 @@ def _resolve_columns(col1: str, col2: Optional[str]) -> Tuple[str, str]:
         return col1, col2
 
     parts = [p.strip() for p in col1.split(",")]
-    if len(parts) == 1:
-        # Treat a single name as both columns.  This allows generic tests that
-        # iterate over all registered metrics to invoke the builder with a single
-        # column without raising an error.  Real callers should provide two
-        # distinct columns for set comparisons.
-        return parts[0], parts[0]
-    if len(parts) == 2:
-        return parts[0], parts[1]
-    raise ValueError("Expected two column names separated by a comma")
+    if len(parts) != 2:
+        raise ValueError("Expected two column names separated by a comma")
+    return parts[0], parts[1]
 
 
 @register_metric("set_overlap_pct")
