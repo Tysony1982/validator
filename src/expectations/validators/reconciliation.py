@@ -36,6 +36,20 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
         Optional SQL filter for the primary engine.
     comparer_where : str, optional
         Optional SQL filter for the comparer engine.
+
+    Examples
+    --------
+    Basic usage compares the same column on two engines:
+
+    >>> mapping = ColumnMapping("a")
+    >>> ColumnReconciliationValidator(
+    ...     column_map=mapping,
+    ...     primary_engine=primary,
+    ...     primary_table="t1",
+    ...     comparer_engine=comparer,
+    ...     comparer_table="t2",
+    ... )
+    <ColumnReconciliationValidator>
     """
 
     _metric_key = "row_cnt"  # unused but required by ``ColumnMetricValidator``
@@ -122,7 +136,16 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
 
 
 class TableReconciliationValidator(ValidatorBase):
-    """Compare table row counts between two engines."""
+    """Compare table row counts between two engines.
+
+    Examples
+    --------
+    >>> TableReconciliationValidator(
+    ...     comparer_engine=comparer,
+    ...     comparer_table="t2",
+    ... )
+    <TableReconciliationValidator>
+    """
 
     def __init__(
         self,

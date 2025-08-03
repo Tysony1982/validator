@@ -146,3 +146,29 @@ store.persist_stats(run, stats)
 
 Persisted statistics are indexed by engine, schema, table and column which makes
 looking up historical ranges for a given column trivial.
+
+## Reconciling Data Between Engines
+
+Use reconciliation validators when the same dataset lives in multiple
+systems and should stay in sync.  A typical pattern compares the row count
+first and then validates individual columns.
+
+Example YAML::
+
+    - expectation_type: TableReconciliationValidator
+      comparer_engine: file
+      comparer_table: staging_users
+    - expectation_type: ColumnReconciliationValidator
+      column_map:
+        primary: id
+      primary_engine: duck
+      primary_table: users
+      comparer_engine: file
+      comparer_table: staging_users
+
+Tips
+----
+* Start with a broad table comparison to catch large mismatches quickly.
+* Apply identical ``where`` filters on both engines if validating a subset.
+* Column mappings support renames and type conversions for heterogeneous
+  sources.

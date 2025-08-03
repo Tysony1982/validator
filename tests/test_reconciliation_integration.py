@@ -7,6 +7,7 @@ from src.expectations.validators.reconciliation import (
     ColumnReconciliationValidator,
     TableReconciliationValidator,
 )
+from src.expectations.utils.mappings import ColumnMapping
 
 
 def test_duckdb_file_reconciliation_success(tmp_path):
@@ -22,7 +23,11 @@ def test_duckdb_file_reconciliation_success(tmp_path):
         comparer_engine=file_eng, comparer_table="f"
     )
     v_col = ColumnReconciliationValidator(
-        column="a", comparer_engine=file_eng, comparer_table="f"
+        column_map=ColumnMapping("a"),
+        primary_engine=duck,
+        primary_table="t",
+        comparer_engine=file_eng,
+        comparer_table="f",
     )
     runner = ValidationRunner({"primary": duck, "file": file_eng})
     res_table, res_col = runner.run(
@@ -47,7 +52,11 @@ def test_duckdb_file_reconciliation_mismatch(tmp_path):
         comparer_engine=file_eng, comparer_table="f"
     )
     v_col = ColumnReconciliationValidator(
-        column="a", comparer_engine=file_eng, comparer_table="f"
+        column_map=ColumnMapping("a"),
+        primary_engine=duck,
+        primary_table="t",
+        comparer_engine=file_eng,
+        comparer_table="f",
     )
     runner = ValidationRunner({"primary": duck, "file": file_eng})
     res_table, res_col = runner.run(

@@ -169,7 +169,14 @@ def _stddev(column: str) -> exp.Expression:
 
 
 def pct_where(predicate_sql: str) -> MetricBuilder:
-    """Return a metric builder for ``pct_where`` using *predicate_sql*."""
+    """Return a metric builder for ``pct_where`` using *predicate_sql*.
+
+    Examples
+    --------
+    >>> pct_red = pct_where("color = 'red'")
+    >>> pct_red("color").sql()
+    "SUM(CASE WHEN color = 'red' THEN 1 ELSE 0 END) / COUNT(*)"
+    """
 
     def _builder(_: str) -> exp.Expression:
         condition = validate_filter_sql(predicate_sql)
@@ -248,7 +255,15 @@ def set_overlap_pct(
     *,
     filter_sql: Optional[str] = None,
 ) -> exp.Expression:
-    """Return the percentage of overlapping values between two columns."""
+    """Return the percentage of overlapping values between two columns.
+
+    Examples
+    --------
+    >>> expr = set_overlap_pct("a", "b")
+    >>> expr.sql()
+    "SUM(CASE WHEN a IS NOT NULL AND b IS NOT NULL THEN 1 END) / "
+    "SUM(CASE WHEN a IS NOT NULL OR b IS NOT NULL THEN 1 END)"
+    """
 
     col_a, col_b = _resolve_columns(column_a, column_b)
     a = exp.column(col_a)
@@ -281,7 +296,14 @@ def missing_values_cnt(
     *,
     filter_sql: Optional[str] = None,
 ) -> exp.Expression:
-    """Count values present in *column_b* but missing from *column_a*."""
+    """Count values present in *column_b* but missing from *column_a*.
+
+    Examples
+    --------
+    >>> expr = missing_values_cnt("expected", "actual")
+    >>> expr.sql()
+    "SUM(CASE WHEN expected IS NULL AND actual IS NOT NULL THEN 1 END)"
+    """
 
     col_a, col_b = _resolve_columns(column_a, column_b)
     a = exp.column(col_a)
@@ -305,7 +327,14 @@ def extra_values_cnt(
     *,
     filter_sql: Optional[str] = None,
 ) -> exp.Expression:
-    """Count values present in *column_a* but missing from *column_b*."""
+    """Count values present in *column_a* but missing from *column_b*.
+
+    Examples
+    --------
+    >>> expr = extra_values_cnt("actual", "expected")
+    >>> expr.sql()
+    "SUM(CASE WHEN actual IS NOT NULL AND expected IS NULL THEN 1 END)"
+    """
 
     col_a, col_b = _resolve_columns(column_a, column_b)
     a = exp.column(col_a)
