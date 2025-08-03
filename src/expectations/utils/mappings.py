@@ -31,12 +31,18 @@ class ColumnMapping:
         Callable used to convert metric results from the primary column.
     comparer_type: callable, optional
         Callable used to convert metric results from the comparer column.
+    primary_case: str, optional
+        Normalize string case for primary values ("lower" or "upper").
+    comparer_case: str, optional
+        Normalize string case for comparer values ("lower" or "upper").
     """
 
     primary: str
     comparer: str | None = None
     primary_type: Callable[[Any], Any] | None = None
     comparer_type: Callable[[Any], Any] | None = None
+    primary_case: str | None = None
+    comparer_case: str | None = None
 
     def convert(self, primary_value: Any, comparer_value: Any) -> tuple[Any, Any]:
         """Apply type conversions to metric results."""
@@ -45,6 +51,19 @@ class ColumnMapping:
             primary_value = self.primary_type(primary_value)
         if self.comparer_type is not None:
             comparer_value = self.comparer_type(comparer_value)
+
+        if self.primary_case and isinstance(primary_value, str):
+            if self.primary_case.lower() == "lower":
+                primary_value = primary_value.lower()
+            elif self.primary_case.lower() == "upper":
+                primary_value = primary_value.upper()
+
+        if self.comparer_case and isinstance(comparer_value, str):
+            if self.comparer_case.lower() == "lower":
+                comparer_value = comparer_value.lower()
+            elif self.comparer_case.lower() == "upper":
+                comparer_value = comparer_value.upper()
+
         return primary_value, comparer_value
 
 
