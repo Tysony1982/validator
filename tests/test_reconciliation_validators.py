@@ -9,6 +9,7 @@ from src.expectations.utils.mappings import ColumnMapping
 from src.expectations.validators.reconciliation import (
     ColumnReconciliationValidator,
     TableReconciliationValidator,
+    ForeignKeyReconciliationValidator,
 )
 
 
@@ -207,4 +208,35 @@ def test_column_mapping_validation():
             comparer_engine=comparer,
             comparer_table="t2",
         )
+
+
+def test_foreign_key_reconciliation_validator_success():
+    eng = DuckDBEngine()
+    eng.register_dataframe("users", pd.DataFrame({"id": [1, 2, 3]}))
+    eng.register_dataframe("orders", pd.DataFrame({"user_id": [1, 2]}))
+
+    v = ForeignKeyReconciliationValidator(
+        column_map=ColumnMapping("id", comparer="user_id"),
+        primary_engine=eng,
+        primary_table="users",
+        foreign_table="orders",
+    )
+    res = _run({"primary": eng}, "orders", v)
+    assert res.success is True
+
+
+def test_foreign_key_reconciliation_validator_failure():
+    eng = DuckDBEngine()
+    eng.register_dataframe("users", pd.DataFrame({"id": [1, 2, 3]}))
+    eng.register_dataframe("orders", pd.DataFrame({"user_id": [1, 4]}))
+
+    v = ForeignKeyReconciliationValidator(
+        column_map=ColumnMapping("id", comparer="user_id"),
+        primary_engine=eng,
+        primary_table="users",
+        foreign_table="orders",
+    )
+    res = _run({"primary": eng}, "orders", v)
+    assert res.success is False
+    assert res.details["missing_values_cnt"] == 1
 
