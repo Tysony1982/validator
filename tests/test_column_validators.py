@@ -12,6 +12,7 @@ from src.expectations.validators.column import (
     ColumnDistinctCount,
     ColumnMin,
     ColumnMax,
+    ColumnPercentile,
     ColumnValueInSet,
     ColumnMatchesRegex,
     ColumnRange,
@@ -164,6 +165,16 @@ def test_row_count_where_clause(duckdb_engine, validation_runner):
     v = RowCountValidator(min_rows=1, max_rows=1, where="b = 2")
     res = _run(validation_runner, "t", v)
     assert res.success is True
+
+
+def test_column_percentile(duckdb_engine, validation_runner):
+    df = pd.DataFrame({"a": [1, 2, 3, 4, 5]})
+    duckdb_engine.register_dataframe("t", df)
+    expected = float(df["a"].quantile(0.9))
+    v_pass = ColumnPercentile(column="a", q=0.9, expected=expected, tolerance=1e-6)
+    assert _run(validation_runner, "t", v_pass).success is True
+    v_fail = ColumnPercentile(column="a", q=0.9, expected=expected - 1.0, tolerance=1e-6)
+    assert _run(validation_runner, "t", v_fail).success is False
 
 
 # ---------------------------------------------------------------------------

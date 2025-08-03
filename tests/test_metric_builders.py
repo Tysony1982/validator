@@ -48,6 +48,17 @@ def test_extra_metrics(duckdb_engine):
     assert df.iloc[0]["sd"] == approx((0.5) ** 0.5)
 
 
+def test_register_percentile(duckdb_engine):
+    df = pd.DataFrame({"a": [1, 2, 3, 4, 5]})
+    duckdb_engine.register_dataframe("t", df)
+    from src.expectations.metrics.registry import get_metric, register_percentile
+
+    register_percentile(0.9)
+    expr = get_metric("pct_90")("a")
+    val = _run_expr(duckdb_engine, "t", expr)
+    assert val == approx(df["a"].quantile(0.9))
+
+
 def test_pct_where_builder(tmp_path, duckdb_engine):
     df = pd.DataFrame({"a": [1, 2, 3], "b": [1, 0, 1]})
     duckdb_engine.register_dataframe("t", df)
