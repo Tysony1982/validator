@@ -8,6 +8,7 @@ Validator Documentation
    engines
    metrics
    validators
+   stats
    runner
    streamlit
    cookbook
