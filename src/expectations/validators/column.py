@@ -20,9 +20,10 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+import pandas as pd
 from sqlglot import exp
 
-from src.expectations.metrics.batch_builder import MetricRequest
+from src.expectations.metrics.batch_builder import MetricRequest, MetricBatchBuilder
 from src.expectations.metrics.registry import (
     register_metric,
     get_metric,
@@ -347,6 +348,41 @@ class ColumnGreaterEqual(ColumnMetricValidator):
         else:
             self.invalid_cnt = int(value)
         return self.invalid_cnt == 0
+
+
+class ColumnUniquenessValidator(ValidatorBase):
+    """Passes when all values in ``column`` are unique.
+
+    Example YAML::
+
+        - expectation_type: ColumnUniquenessValidator
+          column: user_id
+    """
+
+    def __init__(self, *, column: str, where: str | None = None):
+        super().__init__(where=where)
+        self.column = column
+
+    @classmethod
+    def kind(cls):
+        return "custom"
+
+    def custom_sql(self, table: str):
+        distinct = get_metric("distinct_cnt")(self.column)
+        total = get_metric("row_cnt")(self.column)
+        if self.where_condition:
+            distinct = MetricBatchBuilder._apply_filter(distinct, self.where_condition)
+            total = MetricBatchBuilder._apply_filter(total, self.where_condition)
+        diff = exp.Sub(this=total, expression=distinct).as_("dup_cnt")
+        return exp.select(diff).from_(table)
+
+    def interpret(self, value) -> bool:
+        if isinstance(value, pd.DataFrame):
+            dup_cnt = int(value.iloc[0, 0]) if not value.empty else 0
+        else:
+            dup_cnt = int(value or 0)
+        self.duplicate_cnt = dup_cnt
+        return dup_cnt == 0
 
 
 class MetricDriftValidator(ColumnMetricValidator):
