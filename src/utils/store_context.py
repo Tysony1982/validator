@@ -15,8 +15,15 @@ from src.expectations.store.duckdb import DuckDBResultStore
 
 @contextmanager
 def store_connection(store: DuckDBResultStore):
-    """Yield the underlying connection for ad-hoc read-only queries."""
+    """Yield the underlying connection for ad-hoc read-only queries.
+
+    The connection is intentionally left open after the context exits so it can
+    be reused by callers. This helper merely provides syntactic sugar around
+    the store's connection without managing its lifecycle.
+    """
+    conn = store.connection
     try:
-        yield store.connection
+        yield conn
     finally:
+        # The DuckDB connection remains open for the caller to manage.
         pass
