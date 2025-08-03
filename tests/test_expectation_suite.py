@@ -12,6 +12,7 @@ except ImportError:  # pragma: no cover - dev dependency
     from src.expectations.config.expectation import ExpectationSuiteConfig
 from src.expectations.validators.column import ColumnNotNull
 import src.expectations.validators.column as column_mod
+import src.expectations.config.expectation as expectation_mod
 
 
 def test_from_yaml(tmp_path):
@@ -110,6 +111,24 @@ def test_from_file_unknown_extension(tmp_path):
     path.write_text("invalid")
     with pytest.raises(ValueError):
         ExpectationSuiteConfig.from_file(path)
+
+
+def test_build_validators_non_validator(monkeypatch):
+    cfg = ExpectationSuiteConfig.model_validate(
+        {
+            "suite_name": "s",
+            "engine": "duck",
+            "table": "t",
+            "expectations": [{"expectation_type": "Bogus"}],
+        }
+    )
+
+    monkeypatch.setattr(
+        expectation_mod, "_resolve_validator_class", lambda name: "not a class"
+    )
+
+    with pytest.raises(TypeError, match="Bogus is not a ValidatorBase"):
+        cfg.build_validators()
 
 
 from src.expectations.config.expectation import _resolve_validator_class

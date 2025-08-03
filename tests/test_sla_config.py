@@ -1,5 +1,7 @@
 import sys
+import json
 import yaml
+import pytest
 import src.expectations.validators.column as column_mod
 
 from src.expectations.config.expectation import SLAConfig
@@ -49,3 +51,45 @@ def test_to_yaml_round_trip(tmp_path):
     cfg = SLAConfig.from_yaml(path)
     dumped = cfg.to_yaml()
     assert yaml.safe_load(original) == yaml.safe_load(dumped)
+
+
+def test_sla_from_json(tmp_path):
+    data = {
+        "sla_name": "sla",
+        "suites": [
+            {
+                "suite_name": "s1",
+                "engine": "duck",
+                "table": "t1",
+                "expectations": [
+                    {"expectation_type": "ColumnNotNull", "column": "a"}
+                ],
+            }
+        ],
+    }
+    path = tmp_path / "sla.json"
+    path.write_text(json.dumps(data))
+    cfg = SLAConfig.from_json(path)
+    assert cfg.sla_name == "sla"
+    assert len(cfg.suites) == 1
+
+
+def test_sla_from_file_unknown_extension(tmp_path):
+    path = tmp_path / "sla.txt"
+    path.write_text("invalid")
+    with pytest.raises(ValueError):
+        SLAConfig.from_file(path)
+
+
+def test_sla_from_malformed_json(tmp_path):
+    path = tmp_path / "sla.json"
+    path.write_text("{")
+    with pytest.raises(ValueError):
+        SLAConfig.from_json(path)
+
+
+def test_sla_from_malformed_yaml(tmp_path):
+    path = tmp_path / "sla.yaml"
+    path.write_text(": : :")
+    with pytest.raises(yaml.YAMLError):
+        SLAConfig.from_yaml(path)
