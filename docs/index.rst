@@ -7,4 +7,5 @@ Validator Documentation
    validators
    runner
    streamlit
+   stores
    cookbook
