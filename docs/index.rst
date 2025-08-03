@@ -6,3 +6,4 @@ Validator Documentation
 
    validators
    streamlit
+   stores
