@@ -103,8 +103,12 @@ def available_metrics() -> Tuple[str, ...]:
 # ------------------------------------------------------------------ #
 @register_metric("null_pct")
 def _null_pct(column: str) -> exp.Expression:
-    """
-    SUM(CASE WHEN col IS NULL THEN 1 ELSE 0 END) / COUNT(*)
+    """Percentage of ``NULL`` values in *column*.
+
+    Examples
+    --------
+    >>> _null_pct("a").sql()
+    "SUM(CASE WHEN a IS NULL THEN 1 ELSE 0 END) / COUNT(*)"
     """
     col_expr = exp.column(column)
     case_expr = (
@@ -121,32 +125,62 @@ def _null_pct(column: str) -> exp.Expression:
 
 @register_metric("distinct_cnt")
 def _distinct_cnt(column: str) -> exp.Expression:
-    """COUNT(DISTINCT col)"""
+    """Count of distinct values in *column*.
+
+    Examples
+    --------
+    >>> _distinct_cnt("a").sql()
+    'COUNT(DISTINCT a)'
+    """
     distinct = exp.Distinct(expressions=[exp.column(column)])
     return exp.Count(this=distinct)
 
 
 @register_metric("row_cnt")
 def _row_cnt(_: str) -> exp.Expression:
-    """COUNT(*)"""
+    """Total row count for the current table.
+
+    Examples
+    --------
+    >>> _row_cnt("irrelevant").sql()
+    'COUNT(*)'
+    """
     return exp.Count(this=exp.Star())
 
 
 @register_metric("min")
 def _min(column: str) -> exp.Expression:
-    """MIN(col)"""
+    """Minimum value of *column*.
+
+    Examples
+    --------
+    >>> _min("a").sql()
+    'MIN(a)'
+    """
     return exp.Min(this=exp.column(column))
 
 
 @register_metric("max")
 def _max(column: str) -> exp.Expression:
-    """MAX(col)"""
+    """Maximum value of *column*.
+
+    Examples
+    --------
+    >>> _max("a").sql()
+    'MAX(a)'
+    """
     return exp.Max(this=exp.column(column))
 
 
 @register_metric("non_null_cnt")
 def _non_null_cnt(column: str) -> exp.Expression:
-    """COUNT(CASE WHEN col IS NOT NULL THEN 1 END)"""
+    """Count of non-``NULL`` values in *column*.
+
+    Examples
+    --------
+    >>> _non_null_cnt("a").sql()
+    'COUNT(CASE WHEN a IS NOT NULL THEN 1 END)'
+    """
     col_expr = exp.column(column)
     case_expr = (
         exp.Case()
@@ -158,13 +192,25 @@ def _non_null_cnt(column: str) -> exp.Expression:
 
 @register_metric("avg")
 def _avg(column: str) -> exp.Expression:
-    """AVG(col)"""
+    """Average (mean) of *column*.
+
+    Examples
+    --------
+    >>> _avg("a").sql()
+    'AVG(a)'
+    """
     return exp.Avg(this=exp.column(column))
 
 
 @register_metric("stddev")
 def _stddev(column: str) -> exp.Expression:
-    """STDDEV_SAMP(col)"""
+    """Sample standard deviation of *column*.
+
+    Examples
+    --------
+    >>> _stddev("a").sql()
+    'STDDEV_SAMP(a)'
+    """
     return exp.StddevSamp(this=exp.column(column))
 
 
