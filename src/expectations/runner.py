@@ -77,6 +77,7 @@ class ValidationRunner:
                             success=ok,
                             value=val,
                             filter_sql=v.where_condition,
+                            engine_name=eng_key,
                         )
                     )
             except (duckdb.Error, ValueError, RuntimeError) as exc:
@@ -93,6 +94,7 @@ class ValidationRunner:
                             value=None,
                             filter_sql=v.where_condition,
                             details={"error": str(exc), "traceback": tb},
+                            engine_name=eng_key,
                         )
                     )
 
@@ -132,6 +134,7 @@ class ValidationRunner:
                     success=ok,
                     value=raw_val,
                     details=details,
+                    engine_name=eng_key,
                 )
             )
 
