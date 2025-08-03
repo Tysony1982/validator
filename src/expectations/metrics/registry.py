@@ -185,6 +185,34 @@ def pct_where(predicate_sql: str) -> MetricBuilder:
     return _builder
 
 
+def register_pct_where(name: str, predicate_sql: str) -> MetricBuilder:
+    """Register a ``pct_where`` metric under ``name``.
+
+    Parameters
+    ----------
+    name:
+        Key used when looking up the metric via :func:`get_metric`.
+    predicate_sql:
+        SQL predicate evaluated per row. The resulting metric expresses the
+        percentage of rows for which the predicate is true.
+
+    Returns
+    -------
+    MetricBuilder
+        The registered builder, equivalent to :func:`pct_where(predicate_sql)`.
+
+    Examples
+    --------
+    >>> register_pct_where("b_is_one_pct", "b = 1")
+    >>> builder = get_metric("b_is_one_pct")
+    >>> builder("a")  # expression for percentage of rows where b equals 1
+    """
+
+    builder = pct_where(predicate_sql)
+    MetricRegistry.instance().register(name, builder)
+    return builder
+
+
 # --------------------------------------------------------------------------- #
 # Set comparison metrics                                                      #
 # --------------------------------------------------------------------------- #
