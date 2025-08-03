@@ -1,159 +1,180 @@
-# Cookbook
+Cookbook
+========
 
-## Installation
+Installation
+------------
 
 Install the dependencies with:
 
-```bash
-pip install -r requirements.txt
-```
+.. code-block:: bash
+
+    pip install -r requirements.txt
 
 
-## Writing Custom Rules
+Writing Custom Rules
+--------------------
 
-You can supply your own SQL and have the runner fail when that query returns rows.
+You can supply your own SQL and have the runner fail when that query returns
+rows.
 
-```yaml
-- expectation_type: SqlErrorRows
-  sql: |
-    SELECT * FROM your_table WHERE bad_condition
-  max_error_rows: 10  # optional
-```
+.. code-block:: yaml
 
-The validator will attach `error_row_count` and a sample of rows to the validation result.
+    - expectation_type: SqlErrorRows
+      sql: |
+        SELECT * FROM your_table WHERE bad_condition
+      max_error_rows: 10  # optional
 
-## Hooking Up New Validators
+The validator will attach ``error_row_count`` and a sample of rows to the
+validation result.
 
-New validator classes live in the `src/expectations/validators` package.
-If you create a new module (for example `foreign_key.py`) you can reference
-its classes from expectation configs either by dotted path
 
-```yaml
-expectation_type: foreign_key.ForeignKeyValidator
-```
+Hooking Up New Validators
+-------------------------
 
-or by adding the module name to `src/expectations/validators/__init__.py` so
-that it is loaded automatically.  In that case the class can be referred to
-just by its name.
+New validator classes live in the ``src/expectations/validators`` package. If
+you create a new module (for example ``foreign_key.py``) you can reference its
+classes from expectation configs either by dotted path:
 
-## Registering Predicate Metrics
+.. code-block:: yaml
+
+    expectation_type: foreign_key.ForeignKeyValidator
+
+or by adding the module name to ``src/expectations/validators/__init__.py`` so
+that it is loaded automatically. In that case the class can be referred to just
+by its name.
+
+
+Registering Predicate Metrics
+-----------------------------
 
 Metric builders can be extended with custom percentage metrics based on SQL
-predicates.  The :func:`register_pct_where` helper wraps ``pct_where`` and
+predicates. The :func:`register_pct_where` helper wraps ``pct_where`` and
 registers the resulting builder under a given name:
 
-```python
-from src.expectations.metrics.registry import register_pct_where
+.. code-block:: python
 
-register_pct_where("b_is_one_pct", "b = 1")
-```
+    from src.expectations.metrics.registry import register_pct_where
+
+    register_pct_where("b_is_one_pct", "b = 1")
 
 The new metric can then be referenced via ``b_is_one_pct`` in expectation
 configurations or when collecting statistics.
 
-## Validating Files Directly
 
-The `FileEngine` exposes one or more files as a regular SQL table backed by DuckDB.
-Create the engine with a file path (globs allowed) and a table name, then run validators
-like you would against any database table.
+Validating Files Directly
+-------------------------
 
-```python
-from src.expectations.engines.file import FileEngine
-from src.expectations.runner import ValidationRunner
-from src.expectations.config.expectation import SLAConfig
-from src.expectations.result_model import RunMetadata
-from src.expectations.validators.column import ColumnNotNull
+The ``FileEngine`` exposes one or more files as a regular SQL table backed by
+DuckDB. Create the engine with a file path (globs allowed) and a table name,
+then run validators like you would against any database table.
 
-eng = FileEngine("/data/myfile.csv", table="data")
-runner = ValidationRunner({"file": eng})
-run = RunMetadata(suite_name="demo")
-results = runner.run([("file", "data", ColumnNotNull(column="id"))], run_id=run.run_id)
-```
+.. code-block:: python
 
-Wildcards such as `"/data/*.parquet"` combine many files. DuckDB scans the files lazily,
-so only the columns required by each validator are read into memory.
+    from src.expectations.engines.file import FileEngine
+    from src.expectations.runner import ValidationRunner
+    from src.expectations.config.expectation import SLAConfig
+    from src.expectations.result_model import RunMetadata
+    from src.expectations.validators.column import ColumnNotNull
 
-## Grouping Suites into SLAs
+    eng = FileEngine("/data/myfile.csv", table="data")
+    runner = ValidationRunner({"file": eng})
+    run = RunMetadata(suite_name="demo")
+    results = runner.run([("file", "data", ColumnNotNull(column="id"))], run_id=run.run_id)
+
+Wildcards such as ``"/data/*.parquet"`` combine many files. DuckDB scans the
+files lazily, so only the columns required by each validator are read into
+memory.
+
+
+Grouping Suites into SLAs
+-------------------------
 
 Multiple expectation suites can be bundled under a single SLA configuration.
-Each SLA lists the suites it contains and `build_validators()` will aggregate all
-validators for execution.
+Each SLA lists the suites it contains and ``build_validators()`` will aggregate
+all validators for execution.
 
-```yaml
-sla_name: nightly_checks
-suites:
-  - suite_name: users_basic
-    engine: duck
-    table: users
-    expectations:
-      - expectation_type: ColumnNotNull
-        column: id
-  - suite_name: orders_basic
-    engine: duck
-    table: orders
-    expectations:
-      - expectation_type: ColumnNotNull
-          column: order_id
-  ```
+.. code-block:: yaml
 
-## Persisting Validation Results
+    sla_name: nightly_checks
+    suites:
+      - suite_name: users_basic
+        engine: duck
+        table: users
+        expectations:
+          - expectation_type: ColumnNotNull
+            column: id
+      - suite_name: orders_basic
+        engine: duck
+        table: orders
+        expectations:
+          - expectation_type: ColumnNotNull
+            column: order_id
 
-Validation results can be stored for later analysis using pluggable stores.
-Two built-in options are provided:
 
-* `DuckDBResultStore` writes run metadata and results into a DuckDB
-  database.
-* `FileResultStore` dumps JSON files to a directory on disk.
+Persisting Validation Results
+-----------------------------
 
-```python
-from src.expectations.engines.duckdb import DuckDBEngine
-from src.expectations.store import DuckDBResultStore, FileResultStore
-from src.expectations.runner import ValidationRunner
-from src.expectations.result_model import RunMetadata
+Validation results can be stored for later analysis using pluggable stores. Two
+built-in options are provided:
 
-engine = DuckDBEngine("results.db")
-store = DuckDBResultStore(engine)
-# or persist to plain files
-file_store = FileResultStore("/tmp/results")
-runner = ValidationRunner({"duck": DuckDBEngine()})
-run = RunMetadata(suite_name="demo", sla_name="nightly")
-results = runner.run(bindings, run_id=run.run_id)
-# persist results with optional SLA configuration
-sla_cfg = SLAConfig(sla_name="nightly", suites=[])
-store.persist_run(run, results, sla_cfg)
-```
+* ``DuckDBResultStore`` writes run metadata and results into a DuckDB database.
+* ``FileResultStore`` dumps JSON files to a directory on disk.
 
-## Collecting Table Statistics
+.. code-block:: python
 
-`TableStatsCollector` computes basic metrics for every column using the same
+    from src.expectations.engines.duckdb import DuckDBEngine
+    from src.expectations.store import DuckDBResultStore, FileResultStore
+    from src.expectations.runner import ValidationRunner
+    from src.expectations.result_model import RunMetadata
+
+    engine = DuckDBEngine("results.db")
+    store = DuckDBResultStore(engine)
+    # or persist to plain files
+    file_store = FileResultStore("/tmp/results")
+    runner = ValidationRunner({"duck": DuckDBEngine()})
+    run = RunMetadata(suite_name="demo", sla_name="nightly")
+    results = runner.run(bindings, run_id=run.run_id)
+    # persist results with optional SLA configuration
+    sla_cfg = SLAConfig(sla_name="nightly", suites=[])
+    store.persist_run(run, results, sla_cfg)
+
+
+Collecting Table Statistics
+---------------------------
+
+``TableStatsCollector`` computes basic metrics for every column using the same
 metric builders that power the validators. Statistics can be persisted alongside
 validation results and later queried to derive reasonable thresholds or SLOs.
 
-```python
-from src.expectations.stats import TableStatsCollector
-from src.expectations.store import DuckDBResultStore
-from src.expectations.engines.duckdb import DuckDBEngine
-from src.expectations.result_model import RunMetadata
+.. code-block:: python
 
-engine = DuckDBEngine()
-store = DuckDBResultStore(engine)
-collector = TableStatsCollector({"duck": engine})
+    from src.expectations.stats import TableStatsCollector
+    from src.expectations.store import DuckDBResultStore
+    from src.expectations.engines.duckdb import DuckDBEngine
+    from src.expectations.result_model import RunMetadata
 
-run = RunMetadata(suite_name="stats_demo")
-stats = collector.collect("duck", "orders", run_id=run.run_id)
-store.persist_stats(run, stats)
-```
+    engine = DuckDBEngine()
+    store = DuckDBResultStore(engine)
+    collector = TableStatsCollector({"duck": engine})
 
-Persisted statistics are indexed by engine, schema, table and column which makes
-looking up historical ranges for a given column trivial.
+    run = RunMetadata(suite_name="stats_demo")
+    stats = collector.collect("duck", "orders", run_id=run.run_id)
+    store.persist_stats(run, stats)
 
-## Reconciling Data Between Engines
+Persisted statistics are indexed by engine, schema, table and column which
+makes looking up historical ranges for a given column trivial.
 
-Use reconciliation validators when the same dataset lives in multiple
-systems and should stay in sync.  A typical pattern compares the row count
-first and then validates individual columns.
 
-Example YAML::
+Reconciling Data Between Engines
+--------------------------------
+
+Use reconciliation validators when the same dataset lives in multiple systems
+and should stay in sync. A typical pattern compares the row count first and
+then validates individual columns.
+
+Example YAML:
+
+.. code-block:: yaml
 
     - expectation_type: TableReconciliationValidator
       comparer_engine: file
@@ -174,8 +195,9 @@ Example YAML::
 
 Tips
 ----
+
 * Start with a broad table comparison to catch large mismatches quickly.
 * Apply identical ``where`` filters on both engines if validating a subset.
-* Column mappings support renames and type conversions for heterogeneous
-  sources.
+* Column mappings support renames and type conversions for heterogeneous sources.
 * Reconcile one column at a time to keep results interpretable.
+
