@@ -25,6 +25,14 @@ from src.expectations.metrics.registry import get_metric, available_metrics
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True, slots=True)
 class MetricRequest:
+    """Descriptor for a single metric computation.
+
+    Examples
+    --------
+    >>> MetricRequest(column="id", metric="row_cnt", alias="cnt")
+    MetricRequest(column='id', metric='row_cnt', alias='cnt', filter_sql=None)
+    """
+
     column: str
     metric: str
     alias: str
@@ -35,7 +43,14 @@ class MetricRequest:
 # Batch builder                                                               #
 # --------------------------------------------------------------------------- #
 class MetricBatchBuilder:
-    """Convert many :class:`MetricRequest` objects into a single query."""
+    """Convert many :class:`MetricRequest` objects into a single query.
+
+    Examples
+    --------
+    >>> reqs = [MetricRequest(column="id", metric="row_cnt", alias="r")]
+    >>> MetricBatchBuilder(table="t", requests=reqs).sql()
+    'SELECT COUNT(*) AS r FROM t'
+    """
 
     def __init__(
         self,

@@ -83,3 +83,29 @@ service. Two common scenarios are:
 
 Streamlit does not replace the FastAPI service. It only provides a thin UX
 layer, so validations continue to run even if the app is offline.
+
+## Reconciliation
+
+Built-in validators can reconcile data between a primary source and a
+comparer engine.  Start with a row-count check and then drill into
+individual columns.
+
+Example configuration::
+
+    expectations:
+      - expectation_type: TableReconciliationValidator
+        comparer_engine: warehouse
+        comparer_table: users_copy
+      - expectation_type: ColumnReconciliationValidator
+        column_map:
+          primary: id
+        primary_engine: duck
+        primary_table: users
+        comparer_engine: warehouse
+        comparer_table: users_copy
+
+Best practices:
+
+* Run the table validator first to detect large discrepancies early.
+* Apply matching ``where`` clauses on both engines when filtering data.
+* Use :class:`ColumnMapping` to handle renamed columns or type conversions.

@@ -96,12 +96,14 @@ def test_column_reconciliation_mismatched_schema():
     primary.register_dataframe("t1", pd.DataFrame({"a": [1, 2]}))
     comparer.register_dataframe("t2", pd.DataFrame({"b": [1, 2]}))
 
-    v = ColumnReconciliationValidator(
-        column="a", comparer_engine=comparer, comparer_table="t2"
-    )
-    res = _run({"primary": primary, "comp": comparer}, "t1", v)
-    assert res.success is False
-    assert "error" in res.details
+    with pytest.raises(ValueError):
+        ColumnReconciliationValidator(
+            column_map=ColumnMapping("a"),
+            primary_engine=primary,
+            primary_table="t1",
+            comparer_engine=comparer,
+            comparer_table="t2",
+        )
 
 
 def test_column_reconciliation_empty_tables():
@@ -111,7 +113,11 @@ def test_column_reconciliation_empty_tables():
     comparer.register_dataframe("t2", pd.DataFrame({"a": []}))
 
     v = ColumnReconciliationValidator(
-        column="a", comparer_engine=comparer, comparer_table="t2"
+        column_map=ColumnMapping("a"),
+        primary_engine=primary,
+        primary_table="t1",
+        comparer_engine=comparer,
+        comparer_table="t2",
     )
     res = _run({"primary": primary, "comp": comparer}, "t1", v)
     assert res.success is False
