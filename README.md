@@ -96,16 +96,23 @@ Example configuration::
       - expectation_type: TableReconciliationValidator
         comparer_engine: warehouse
         comparer_table: users_copy
+        where: "active = 1"
+        comparer_where: "status = 'active'"
       - expectation_type: ColumnReconciliationValidator
         column_map:
           primary: id
+          comparer: user_id
+          comparer_type: int
         primary_engine: duck
         primary_table: users
         comparer_engine: warehouse
         comparer_table: users_copy
+        where: "active = 1"
+        comparer_where: "status = 'active'"
 
 Best practices:
 
 * Run the table validator first to detect large discrepancies early.
 * Apply matching ``where`` clauses on both engines when filtering data.
 * Use :class:`ColumnMapping` to handle renamed columns or type conversions.
+* Keep mappings small and focused; reconcile one column at a time for clear errors.

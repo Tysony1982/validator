@@ -158,13 +158,19 @@ Example YAML::
     - expectation_type: TableReconciliationValidator
       comparer_engine: file
       comparer_table: staging_users
+      where: "active = 1"
+      comparer_where: "status = 'active'"
     - expectation_type: ColumnReconciliationValidator
       column_map:
         primary: id
+        comparer: user_id
+        comparer_type: int
       primary_engine: duck
       primary_table: users
       comparer_engine: file
       comparer_table: staging_users
+      where: "active = 1"
+      comparer_where: "status = 'active'"
 
 Tips
 ----
@@ -172,3 +178,4 @@ Tips
 * Apply identical ``where`` filters on both engines if validating a subset.
 * Column mappings support renames and type conversions for heterogeneous
   sources.
+* Reconcile one column at a time to keep results interpretable.

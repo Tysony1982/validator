@@ -40,17 +40,34 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
 
     Examples
     --------
-    Basic usage compares the same column on two engines:
+    Basic usage compares the same column on two engines::
 
-    >>> mapping = ColumnMapping("a")
-    >>> ColumnReconciliationValidator(
-    ...     column_map=mapping,
-    ...     primary_engine=primary,
-    ...     primary_table="t1",
-    ...     comparer_engine=comparer,
-    ...     comparer_table="t2",
-    ... )
-    <ColumnReconciliationValidator>
+        mapping = ColumnMapping("a")
+        ColumnReconciliationValidator(
+            column_map=mapping,
+            primary_engine=primary,
+            primary_table="t1",
+            comparer_engine=comparer,
+            comparer_table="t2",
+        )
+
+    Column mappings can rename and cast values::
+
+        mapping = ColumnMapping(
+            primary="id",
+            comparer="user_id",
+            comparer_type=int,
+        )
+        ColumnReconciliationValidator(
+            column_map=mapping,
+            primary_engine=primary,
+            primary_table="users",
+            comparer_engine=comparer,
+            comparer_table="users_copy",
+            where="active = 1",
+            comparer_where="status = 'active'",
+        )
+        <ColumnReconciliationValidator>
     """
 
     _metric_key = "row_cnt"  # unused but required by ``ColumnMetricValidator``
@@ -136,13 +153,35 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
 class TableReconciliationValidator(ValidatorBase):
     """Compare table row counts between two engines.
 
+    Parameters
+    ----------
+    comparer_engine : BaseEngine
+        Engine used for the comparison query.
+    comparer_table : str
+        Table name on the comparer engine.
+    where : str, optional
+        Optional SQL filter for the primary engine.
+    comparer_where : str, optional
+        Optional SQL filter for the comparer engine.
+
     Examples
     --------
-    >>> TableReconciliationValidator(
-    ...     comparer_engine=comparer,
-    ...     comparer_table="t2",
-    ... )
-    <TableReconciliationValidator>
+    Basic usage::
+
+        TableReconciliationValidator(
+            comparer_engine=comparer,
+            comparer_table="t2",
+        )
+
+    Apply filters when validating a subset of rows::
+
+        TableReconciliationValidator(
+            comparer_engine=comparer,
+            comparer_table="t2",
+            where="active = 1",
+            comparer_where="status = 'active'",
+        )
+        <TableReconciliationValidator>
     """
 
     def __init__(
