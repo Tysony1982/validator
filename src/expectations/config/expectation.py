@@ -63,7 +63,13 @@ class ExpectationSuiteConfig(BaseModel):
                 cls = SqlErrorRowsValidator
             else:
                 cls = _resolve_validator_class(cfg.expectation_type)
-            if not issubclass(cls, ValidatorBase):
+            try:
+                is_validator = issubclass(cls, ValidatorBase)
+            except TypeError as exc:
+                raise TypeError(
+                    f"{cfg.expectation_type} is not a ValidatorBase"
+                ) from exc
+            if not is_validator:
                 raise TypeError(f"{cfg.expectation_type} is not a ValidatorBase")
 
             init_kwargs = dict(getattr(cfg, "kwargs", {}) or {})
