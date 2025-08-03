@@ -36,6 +36,21 @@ or by adding the module name to `src/expectations/validators/__init__.py` so
 that it is loaded automatically.  In that case the class can be referred to
 just by its name.
 
+## Registering Predicate Metrics
+
+Metric builders can be extended with custom percentage metrics based on SQL
+predicates.  The :func:`register_pct_where` helper wraps ``pct_where`` and
+registers the resulting builder under a given name:
+
+```python
+from src.expectations.metrics.registry import register_pct_where
+
+register_pct_where("b_is_one_pct", "b = 1")
+```
+
+The new metric can then be referenced via ``b_is_one_pct`` in expectation
+configurations or when collecting statistics.
+
 ## Validating Files Directly
 
 The `FileEngine` exposes one or more files as a regular SQL table backed by DuckDB.

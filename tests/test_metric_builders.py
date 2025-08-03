@@ -63,3 +63,16 @@ def test_pct_where_builder(tmp_path):
     expr = builder("a")
     val = _run_expr(eng, "t", expr)
     assert val == approx(2 / 3)
+
+
+def test_register_pct_where(tmp_path):
+    eng = DuckDBEngine()
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [1, 0, 1]})
+    eng.register_dataframe("t", df)
+
+    from src.expectations.metrics.registry import get_metric, register_pct_where
+
+    register_pct_where("b_is_one_pct", "b = 1")
+    expr = get_metric("b_is_one_pct")("a")
+    val = _run_expr(eng, "t", expr)
+    assert val == approx(2 / 3)
