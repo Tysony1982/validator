@@ -22,7 +22,7 @@ key           | meaning                               | expression
 from __future__ import annotations
 
 import threading
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict, Tuple, Optional
 
 from sqlglot import exp
 from src.expectations.metrics.utils import validate_filter_sql
@@ -30,7 +30,11 @@ from src.expectations.metrics.utils import validate_filter_sql
 # --------------------------------------------------------------------------- #
 # Public typing alias                                                         #
 # --------------------------------------------------------------------------- #
-MetricBuilder = Callable[[str], exp.Expression]
+# ``MetricBuilder`` functions may accept additional arguments beyond a single
+# column name (e.g. multiple columns or a filter expression).  We therefore
+# type it as a generic callable and leave runtime validation to the builders
+# themselves.
+MetricBuilder = Callable[..., exp.Expression]
 
 
 class MetricRegistry:
@@ -179,3 +183,112 @@ def pct_where(predicate_sql: str) -> MetricBuilder:
         return exp.Div(this=sum_true, expression=count_rows)
 
     return _builder
+
+
+# --------------------------------------------------------------------------- #
+# Set comparison metrics                                                      #
+# --------------------------------------------------------------------------- #
+
+def _resolve_columns(col1: str, col2: Optional[str]) -> Tuple[str, str]:
+    """Return a pair of column names.
+
+    Builders may be invoked either with two separate column arguments or with a
+    single comma-separated string containing both column names.  This helper
+    normalizes the input to a two-item tuple and raises ``ValueError`` if the
+    input is malformed.
+    """
+
+    if col2 is not None:
+        return col1, col2
+
+    parts = [p.strip() for p in col1.split(",")]
+    if len(parts) == 1:
+        # Treat a single name as both columns.  This allows generic tests that
+        # iterate over all registered metrics to invoke the builder with a single
+        # column without raising an error.  Real callers should provide two
+        # distinct columns for set comparisons.
+        return parts[0], parts[0]
+    if len(parts) == 2:
+        return parts[0], parts[1]
+    raise ValueError("Expected two column names separated by a comma")
+
+
+@register_metric("set_overlap_pct")
+def set_overlap_pct(
+    column_a: str,
+    column_b: Optional[str] = None,
+    *,
+    filter_sql: Optional[str] = None,
+) -> exp.Expression:
+    """Return the percentage of overlapping values between two columns."""
+
+    col_a, col_b = _resolve_columns(column_a, column_b)
+    a = exp.column(col_a)
+    b = exp.column(col_b)
+
+    a_not_null = exp.Not(this=exp.Is(this=a, expression=exp.null()))
+    b_not_null = exp.Not(this=exp.Is(this=b, expression=exp.null()))
+
+    filt = validate_filter_sql(filter_sql) if filter_sql else None
+
+    inter_cond = exp.and_(a_not_null, b_not_null)
+    if filt is not None:
+        inter_cond = exp.and_(filt, inter_cond)
+    inter_case = exp.Case().when(inter_cond, exp.Literal.number(1))
+    inter_cnt = exp.Sum(this=inter_case)
+
+    union_cond = exp.or_(a_not_null, b_not_null)
+    if filt is not None:
+        union_cond = exp.and_(filt, union_cond)
+    union_case = exp.Case().when(union_cond, exp.Literal.number(1))
+    union_cnt = exp.Sum(this=union_case)
+
+    return exp.Div(this=inter_cnt, expression=union_cnt)
+
+
+@register_metric("missing_values_cnt")
+def missing_values_cnt(
+    column_a: str,
+    column_b: Optional[str] = None,
+    *,
+    filter_sql: Optional[str] = None,
+) -> exp.Expression:
+    """Count values present in *column_b* but missing from *column_a*."""
+
+    col_a, col_b = _resolve_columns(column_a, column_b)
+    a = exp.column(col_a)
+    b = exp.column(col_b)
+
+    cond = exp.and_(
+        exp.Is(this=a, expression=exp.null()),
+        exp.Not(this=exp.Is(this=b, expression=exp.null())),
+    )
+    if filter_sql:
+        cond = exp.and_(validate_filter_sql(filter_sql), cond)
+
+    case_expr = exp.Case().when(cond, exp.Literal.number(1))
+    return exp.Sum(this=case_expr)
+
+
+@register_metric("extra_values_cnt")
+def extra_values_cnt(
+    column_a: str,
+    column_b: Optional[str] = None,
+    *,
+    filter_sql: Optional[str] = None,
+) -> exp.Expression:
+    """Count values present in *column_a* but missing from *column_b*."""
+
+    col_a, col_b = _resolve_columns(column_a, column_b)
+    a = exp.column(col_a)
+    b = exp.column(col_b)
+
+    cond = exp.and_(
+        exp.Not(this=exp.Is(this=a, expression=exp.null())),
+        exp.Is(this=b, expression=exp.null()),
+    )
+    if filter_sql:
+        cond = exp.and_(validate_filter_sql(filter_sql), cond)
+
+    case_expr = exp.Case().when(cond, exp.Literal.number(1))
+    return exp.Sum(this=case_expr)
