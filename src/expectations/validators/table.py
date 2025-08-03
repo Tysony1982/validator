@@ -156,3 +156,41 @@ class PrimaryKeyUniquenessValidator(ValidatorBase):
             dup_cnt = int(value or 0)
         self.duplicate_cnt = dup_cnt
         return dup_cnt == 0
+
+
+# --------------------------------------------------------------------------- #
+# Table freshness validator                                                    #
+# --------------------------------------------------------------------------- #
+class TableFreshnessValidator(ValidatorBase):
+    """Passes when the most recent ``timestamp_column`` is within ``threshold``.
+
+    ``threshold`` may be any value accepted by :func:`pandas.Timedelta`, e.g.
+    ``"1h"`` or ``pd.Timedelta(hours=1)``.
+    """
+
+    def __init__(self, *, timestamp_column: str, threshold, where: str | None = None):
+        super().__init__(where=where)
+        self.timestamp_column = timestamp_column
+        self.threshold = pd.Timedelta(threshold)
+
+    # ---- ValidatorBase interface ------------------------------------
+    @classmethod
+    def kind(cls):
+        return "metric"
+
+    def metric_request(self) -> MetricRequest:
+        return MetricRequest(
+            column=self.timestamp_column,
+            metric="max",
+            alias=self.runtime_id,
+            filter_sql=self.where_condition,
+        )
+
+    def interpret(self, value) -> bool:
+        if value is None or (isinstance(value, float) and pd.isna(value)):
+            self.max_timestamp = None
+            return False
+
+        self.max_timestamp = pd.Timestamp(value)
+        now = pd.Timestamp.utcnow()
+        return self.max_timestamp >= now - self.threshold

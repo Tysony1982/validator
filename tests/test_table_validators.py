@@ -1,11 +1,10 @@
 import pandas as pd
 
-import pandas as pd
-
 from src.expectations.validators.table import (
     RowCountValidator,
     DuplicateRowValidator,
     PrimaryKeyUniquenessValidator,
+    TableFreshnessValidator,
 )
 
 
@@ -65,3 +64,17 @@ def test_primary_key_uniqueness(duckdb_engine, validation_runner):
         ).success
         is True
     )
+
+
+def test_table_freshness(duckdb_engine, validation_runner):
+    now = pd.Timestamp.utcnow()
+    fresh = pd.DataFrame({"ts": [now]})
+    stale = pd.DataFrame({"ts": [now - pd.Timedelta(hours=2)]})
+    duckdb_engine.register_dataframe("fresh", fresh)
+    duckdb_engine.register_dataframe("stale", stale)
+
+    v_fresh = TableFreshnessValidator(timestamp_column="ts", threshold="1h")
+    assert _run(validation_runner, "fresh", v_fresh).success is True
+
+    v_stale = TableFreshnessValidator(timestamp_column="ts", threshold="1h")
+    assert _run(validation_runner, "stale", v_stale).success is False
