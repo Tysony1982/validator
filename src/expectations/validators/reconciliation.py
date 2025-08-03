@@ -8,6 +8,7 @@ import pandas as pd
 
 from src.expectations.engines.base import BaseEngine
 from src.expectations.metrics.batch_builder import MetricBatchBuilder, MetricRequest
+from src.expectations.utils.mappings import ColumnMapping, validate_column_mapping
 from src.expectations.validators.base import ValidatorBase
 from src.expectations.validators.column import ColumnMetricValidator
 
@@ -20,14 +21,17 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
 
     Parameters
     ----------
-    column : str
-        Column name on the primary table.
+    column_map : :class:`~src.expectations.utils.mappings.ColumnMapping`
+        Mapping between the primary and comparer columns.  Allows name
+        remapping and value type conversions.
+    primary_engine : BaseEngine
+        Engine for the primary table used for validation of the mapping.
+    primary_table : str
+        Table name on the primary engine.
     comparer_engine : BaseEngine
         Engine used for the comparison query.
     comparer_table : str
         Table name on the comparer engine.
-    comparer_column : str, optional
-        Column on the comparer table; defaults to ``column``.
     where : str, optional
         Optional SQL filter for the primary engine.
     comparer_where : str, optional
@@ -44,18 +48,27 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
     def __init__(
         self,
         *,
-        column: str,
+        column_map: ColumnMapping,
+        primary_engine: BaseEngine,
+        primary_table: str,
         comparer_engine: BaseEngine,
         comparer_table: str,
-        comparer_column: str | None = None,
         where: str | None = None,
         comparer_where: str | None = None,
     ) -> None:
-        super().__init__(column=column, where=where)
+        super().__init__(column=column_map.primary, where=where)
+        self.column_map = column_map
         self.comparer_engine = comparer_engine
         self.comparer_table = comparer_table
-        self.comparer_column = comparer_column or column
         self.comparer_where = comparer_where
+
+        validate_column_mapping(
+            column_map,
+            primary_engine,
+            primary_table,
+            comparer_engine,
+            comparer_table,
+        )
 
     # ---- ValidatorBase interface ------------------------------------
     @classmethod
@@ -81,8 +94,9 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
         primary = {m: row[m] for m in self._metrics}
 
         cmp_requests = []
+        comparer_col = self.column_map.comparer or self.column_map.primary
         for metric in self._metrics:
-            col = self.comparer_column if metric != "row_cnt" else "*"
+            col = comparer_col if metric != "row_cnt" else "*"
             cmp_requests.append(
                 MetricRequest(
                     column=col,
@@ -97,6 +111,11 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
         cmp_df = self.comparer_engine.run_sql(sql)
         cmp_row = cmp_df.iloc[0]
         comparer = {m: cmp_row[m] for m in self._metrics}
+
+        for metric in self._metrics:
+            p_val, c_val = self.column_map.convert(primary[metric], comparer[metric])
+            primary[metric] = p_val
+            comparer[metric] = c_val
 
         self.details = {"primary": primary, "comparer": comparer}
         return primary == comparer
