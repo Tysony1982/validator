@@ -1,7 +1,5 @@
 import pandas as pd
 
-import pandas as pd
-
 from src.expectations.engines.duckdb import DuckDBEngine
 from src.expectations.runner import ValidationRunner
 from src.expectations.validators.reconciliation import (
@@ -58,3 +56,87 @@ def test_column_reconciliation_validator():
     assert res_fail.success is False
     assert res_fail.details["primary"]["row_cnt"] == 3
     assert res_fail.details["comparer"]["row_cnt"] == 2
+
+
+def test_column_reconciliation_with_nulls():
+    primary = DuckDBEngine()
+    comparer = DuckDBEngine()
+    primary.register_dataframe("t1", pd.DataFrame({"a": [1, None, 2]}))
+    comparer.register_dataframe("t2", pd.DataFrame({"a": [1, None, 2]}))
+
+    v = ColumnReconciliationValidator(
+        column="a", comparer_engine=comparer, comparer_table="t2"
+    )
+    res = _run({"primary": primary, "comp": comparer}, "t1", v)
+    assert res.success is True
+
+
+def test_column_reconciliation_mismatched_schema():
+    primary = DuckDBEngine()
+    comparer = DuckDBEngine()
+    primary.register_dataframe("t1", pd.DataFrame({"a": [1, 2]}))
+    comparer.register_dataframe("t2", pd.DataFrame({"b": [1, 2]}))
+
+    v = ColumnReconciliationValidator(
+        column="a", comparer_engine=comparer, comparer_table="t2"
+    )
+    res = _run({"primary": primary, "comp": comparer}, "t1", v)
+    assert res.success is False
+    assert "error" in res.details
+
+
+def test_column_reconciliation_empty_tables():
+    primary = DuckDBEngine()
+    comparer = DuckDBEngine()
+    primary.register_dataframe("t1", pd.DataFrame({"a": []}))
+    comparer.register_dataframe("t2", pd.DataFrame({"a": []}))
+
+    v = ColumnReconciliationValidator(
+        column="a", comparer_engine=comparer, comparer_table="t2"
+    )
+    res = _run({"primary": primary, "comp": comparer}, "t1", v)
+    assert res.success is False
+    assert res.details["primary"]["row_cnt"] == 0
+    assert res.details["comparer"]["row_cnt"] == 0
+
+
+def test_table_reconciliation_mismatched_schema():
+    primary = DuckDBEngine()
+    comparer = DuckDBEngine()
+    primary.register_dataframe("t1", pd.DataFrame({"a": [1, 2]}))
+    comparer.register_dataframe("t2", pd.DataFrame({"b": [1, 2]}))
+
+    v = TableReconciliationValidator(
+        comparer_engine=comparer, comparer_table="t2"
+    )
+    res = _run({"primary": primary, "comp": comparer}, "t1", v)
+    assert res.success is True
+
+
+def test_table_reconciliation_empty_tables():
+    primary = DuckDBEngine()
+    comparer = DuckDBEngine()
+    primary.register_dataframe("t1", pd.DataFrame({"a": []}))
+    comparer.register_dataframe("t2", pd.DataFrame({"a": []}))
+
+    v = TableReconciliationValidator(
+        comparer_engine=comparer, comparer_table="t2"
+    )
+    res = _run({"primary": primary, "comp": comparer}, "t1", v)
+    assert res.success is True
+    assert res.details == {"primary": 0, "comparer": 0}
+
+
+def test_table_reconciliation_one_empty():
+    primary = DuckDBEngine()
+    comparer = DuckDBEngine()
+    primary.register_dataframe("t1", pd.DataFrame({"a": [1]}))
+    comparer.register_dataframe("t2", pd.DataFrame({"a": []}))
+
+    v = TableReconciliationValidator(
+        comparer_engine=comparer, comparer_table="t2"
+    )
+    res = _run({"primary": primary, "comp": comparer}, "t1", v)
+    assert res.success is False
+    assert res.details["primary"] == 1
+    assert res.details["comparer"] == 0
