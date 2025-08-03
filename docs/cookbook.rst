@@ -44,6 +44,21 @@ that it is loaded automatically. In that case the class can be referred to just
 by its name.
 
 
+Checking Table Freshness
+------------------------
+
+Validate that a table receives recent data by comparing the most recent
+timestamp in a column against a maximum age. ``TableFreshnessValidator``
+computes ``MAX(timestamp_column)`` and ensures it is no older than
+``threshold`` from the current time.
+
+.. code-block:: yaml
+
+    - expectation_type: TableFreshnessValidator
+      timestamp_column: updated_at
+      threshold: "1h"
+
+
 Registering Predicate Metrics
 -----------------------------
 
