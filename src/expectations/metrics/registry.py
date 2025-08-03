@@ -214,6 +214,53 @@ def _stddev(column: str) -> exp.Expression:
     return exp.StddevSamp(this=exp.column(column))
 
 
+def percentile(column: str, q: float) -> exp.Expression:
+    """Continuous percentile of *column* at quantile *q*.
+
+    Parameters
+    ----------
+    column:
+        Column name to compute the percentile for.
+    q:
+        Desired quantile in the ``0-1`` range.
+
+    Examples
+    --------
+    >>> percentile("a", 0.9).sql()
+    'PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY a)'
+    """
+    if not 0 <= q <= 1:
+        raise ValueError("q must be between 0 and 1")
+
+    order = exp.Order(expressions=[exp.Ordered(this=exp.column(column))])
+    within = exp.WithinGroup(
+        this=exp.PercentileCont(this=exp.Literal.number(q)),
+        expression=order,
+    )
+    return within
+
+
+def register_percentile(q: float) -> MetricBuilder:
+    """Register a ``percentile`` metric for quantile *q*.
+
+    The metric key follows the ``pct_<q>`` convention where ``<q>`` is the
+    percentile on a ``0-100`` scale (integer).
+    """
+
+    name = f"pct_{int(q * 100)}"
+
+    def _builder(column: str) -> exp.Expression:
+        return percentile(column, q)
+
+    registry = MetricRegistry.instance()
+    try:
+        registry.register(name, _builder)
+        return _builder
+    except KeyError:
+        # Metric already registered; return the existing builder
+        return registry.get(name)
+
+
 def pct_where(predicate_sql: str) -> MetricBuilder:
     """Return a metric builder for ``pct_where`` using *predicate_sql*.
 

@@ -23,7 +23,11 @@ from typing import Any, Optional
 from sqlglot import exp
 
 from src.expectations.metrics.batch_builder import MetricRequest
-from src.expectations.metrics.registry import register_metric, get_metric
+from src.expectations.metrics.registry import (
+    register_metric,
+    get_metric,
+    register_percentile,
+)
 from src.expectations.validators.base import ValidatorBase
 
 
@@ -165,6 +169,34 @@ class ColumnMax(ColumnMetricValidator):
         if self.strict:
             return self.observed_max < self.max_value
         return self.observed_max <= self.max_value
+
+
+class ColumnPercentile(ColumnMetricValidator):
+    """Passes when the observed percentile is within ``tolerance`` of ``expected``."""
+
+    _metric_key = None  # set during initialization
+
+    def __init__(
+        self,
+        *,
+        column: str,
+        q: float,
+        expected: float,
+        tolerance: float = 1e-6,
+        **kw,
+    ):
+        if not 0 <= q <= 1:
+            raise ValueError("q must be between 0 and 1")
+        self.q = q
+        self.expected = expected
+        self.tolerance = tolerance
+        self._metric_key = f"pct_{int(q * 100)}"
+        register_percentile(q)
+        super().__init__(column=column, **kw)
+
+    def interpret(self, value) -> bool:
+        self.percentile = float(value)
+        return abs(self.percentile - self.expected) <= self.tolerance
 
 
 class ColumnValueInSet(ColumnMetricValidator):
