@@ -171,6 +171,22 @@ Column mappings can rename and cast values::
     )
     <ColumnReconciliationValidator>
 
+ColumnUniquenessValidator
+------------------------
+
+**Signature**::
+
+    ColumnUniquenessValidator(column: 'str', where: 'str | None' = None)
+
+Passes when ``COUNT(DISTINCT column)`` equals ``COUNT(*)``.
+
+Example YAML:
+
+.. code-block:: yaml
+
+   - expectation_type: ColumnUniquenessValidator
+     column: user_id
+
 ColumnValueInSet
 ----------------
 

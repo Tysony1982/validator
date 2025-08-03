@@ -17,6 +17,7 @@ from src.expectations.validators.column import (
     ColumnMatchesRegex,
     ColumnRange,
     ColumnGreaterEqual,
+    ColumnUniquenessValidator,
 )
 from src.expectations.validators.table import RowCountValidator
 
@@ -130,6 +131,18 @@ def test_column_greater_equal(duckdb_engine, validation_runner):
     assert _run(validation_runner, "t", v).success is False
 
 
+def test_column_uniqueness_validator(duckdb_engine, validation_runner):
+    df_unique = pd.DataFrame({"a": [1, 2, 3]})
+    duckdb_engine.register_dataframe("t1", df_unique)
+    ok = _run(validation_runner, "t1", ColumnUniquenessValidator(column="a"))
+    assert ok.success is True
+
+    df_dup = pd.DataFrame({"a": [1, 1, 2]})
+    duckdb_engine.register_dataframe("t2", df_dup)
+    fail = _run(validation_runner, "t2", ColumnUniquenessValidator(column="a"))
+    assert fail.success is False
+
+
 def test_column_min_where_clause(duckdb_engine, validation_runner):
     df = pd.DataFrame({"a": [1, 3], "b": [0, 1]})
     duckdb_engine.register_dataframe("t", df)
@@ -175,6 +188,26 @@ def test_column_percentile(duckdb_engine, validation_runner):
     assert _run(validation_runner, "t", v_pass).success is True
     v_fail = ColumnPercentile(column="a", q=0.9, expected=expected - 1.0, tolerance=1e-6)
     assert _run(validation_runner, "t", v_fail).success is False
+
+
+def test_column_uniqueness_from_yaml(tmp_path, duckdb_engine, validation_runner):
+    yaml_content = """
+suite_name: s
+engine: duck
+table: t
+expectations:
+  - expectation_type: ColumnUniquenessValidator
+    column: a
+"""
+    path = tmp_path / "suite.yml"
+    path.write_text(yaml_content)
+
+    from src.expectations.config.expectation import ExpectationSuiteConfig
+
+    cfg = ExpectationSuiteConfig.from_yaml(path)
+    duckdb_engine.register_dataframe("t", pd.DataFrame({"a": [1, 2, 3]}))
+    res = validation_runner.run(list(cfg.build_validators()), run_id="test")[0]
+    assert res.success is True
 
 
 # ---------------------------------------------------------------------------
