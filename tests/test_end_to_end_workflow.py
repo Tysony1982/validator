@@ -1,15 +1,11 @@
 import pandas as pd
 
 from src.expectations.config.expectation import SLAConfig
-from src.expectations.runner import ValidationRunner
 from src.expectations.store import DuckDBResultStore
 from src.expectations.workflow import run_validations
 
-from tests.utils import setup_sample_engine
-
-
-def test_full_end_to_end_workflow(tmp_path):
-    eng = setup_sample_engine()
+def test_full_end_to_end_workflow(tmp_path, sample_tables, validation_runner):
+    eng = sample_tables
 
     sla_yaml = """
     sla_name: ecommerce
@@ -57,7 +53,7 @@ def test_full_end_to_end_workflow(tmp_path):
 
     sla_cfg = SLAConfig.from_yaml(path)
 
-    runner = ValidationRunner({"duck": eng})
+    runner = validation_runner
     store = DuckDBResultStore(eng)
 
     store.connection.execute("DELETE FROM runs")

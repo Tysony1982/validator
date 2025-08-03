@@ -1,14 +1,12 @@
 import pandas as pd
 
-from src.expectations.engines.duckdb import DuckDBEngine
 from src.expectations.engines.base import BaseEngine
 
 
-def test_duckdb_list_columns():
-    eng = DuckDBEngine()
+def test_duckdb_list_columns(duckdb_engine):
     df = pd.DataFrame({"a": [1], "b": [2]})
-    eng.register_dataframe("t", df)
-    cols = set(eng.list_columns("t"))
+    duckdb_engine.register_dataframe("t", df)
+    cols = set(duckdb_engine.list_columns("t"))
     assert cols == {"a", "b"}
 
 

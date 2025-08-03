@@ -1,7 +1,7 @@
 import pandas as pd
 
-from src.expectations.engines.duckdb import DuckDBEngine
-from src.expectations.runner import ValidationRunner
+import pandas as pd
+
 from src.expectations.validators.table import (
     RowCountValidator,
     DuplicateRowValidator,
@@ -9,46 +9,59 @@ from src.expectations.validators.table import (
 )
 
 
-def _run(eng, table, validator):
-    runner = ValidationRunner({"duck": eng})
+def _run(runner, table, validator):
     return runner.run([("duck", table, validator)], run_id="test")[0]
 
 
-def test_row_count_bounds():
-    eng = DuckDBEngine()
-    eng.register_dataframe("t0", pd.DataFrame({"a": []}))
-    eng.register_dataframe("t1", pd.DataFrame({"a": [1]}))
-    eng.register_dataframe("t5", pd.DataFrame({"a": range(5)}))
+def test_row_count_bounds(duckdb_engine, validation_runner):
+    duckdb_engine.register_dataframe("t0", pd.DataFrame({"a": []}))
+    duckdb_engine.register_dataframe("t1", pd.DataFrame({"a": [1]}))
+    duckdb_engine.register_dataframe("t5", pd.DataFrame({"a": range(5)}))
 
-    v = RowCountValidator(min_rows=1, max_rows=3)
-    assert _run(eng, "t0", RowCountValidator(min_rows=1, max_rows=3)).success is False
-    assert _run(eng, "t1", RowCountValidator(min_rows=1, max_rows=3)).success is True
-    assert _run(eng, "t5", RowCountValidator(min_rows=1, max_rows=3)).success is False
+    assert (
+        _run(validation_runner, "t0", RowCountValidator(min_rows=1, max_rows=3)).success
+        is False
+    )
+    assert (
+        _run(validation_runner, "t1", RowCountValidator(min_rows=1, max_rows=3)).success
+        is True
+    )
+    assert (
+        _run(validation_runner, "t5", RowCountValidator(min_rows=1, max_rows=3)).success
+        is False
+    )
 
 
-def test_duplicate_row_validator():
-    eng = DuckDBEngine()
+def test_duplicate_row_validator(duckdb_engine, validation_runner):
     df_dup = pd.DataFrame({"a": [1, 1, 2], "b": [1, 1, 2]})
     df_ok = pd.DataFrame({"a": [1, 2, 3], "b": [1, 2, 3]})
-    eng.register_dataframe("dup", df_dup)
-    eng.register_dataframe("ok", df_ok)
+    duckdb_engine.register_dataframe("dup", df_dup)
+    duckdb_engine.register_dataframe("ok", df_ok)
 
     assert (
-        _run(eng, "dup", DuplicateRowValidator(key_columns=["a", "b"])).success is False
+        _run(
+            validation_runner, "dup", DuplicateRowValidator(key_columns=["a", "b"])
+        ).success
+        is False
     )
     assert (
-        _run(eng, "ok", DuplicateRowValidator(key_columns=["a", "b"])).success is True
+        _run(
+            validation_runner, "ok", DuplicateRowValidator(key_columns=["a", "b"])
+        ).success
+        is True
     )
 
 
-def test_primary_key_uniqueness():
-    eng = DuckDBEngine()
-    df = pd.DataFrame({"id": [1, 1, 2]})
-    eng.register_dataframe("t", df)
+def test_primary_key_uniqueness(duckdb_engine, validation_runner):
+    duckdb_engine.register_dataframe("t", pd.DataFrame({"id": [1, 1, 2]}))
     v = PrimaryKeyUniquenessValidator(key_columns=["id"])
-    assert _run(eng, "t", v).success is False
-    eng.register_dataframe("t2", pd.DataFrame({"id": [1, 2]}))
+    assert _run(validation_runner, "t", v).success is False
+    duckdb_engine.register_dataframe("t2", pd.DataFrame({"id": [1, 2]}))
     assert (
-        _run(eng, "t2", PrimaryKeyUniquenessValidator(key_columns=["id"])).success
+        _run(
+            validation_runner,
+            "t2",
+            PrimaryKeyUniquenessValidator(key_columns=["id"]),
+        ).success
         is True
     )

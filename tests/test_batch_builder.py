@@ -2,9 +2,12 @@ import pandas as pd
 import pytest
 from sqlglot import select
 
+import pandas as pd
+import pytest
+from sqlglot import select
+
 from src.expectations.metrics.batch_builder import MetricBatchBuilder, MetricRequest
 from src.expectations.errors import ValidationConfigError
-from src.expectations.engines.duckdb import DuckDBEngine
 
 
 def test_alias_ordering():
@@ -17,16 +20,15 @@ def test_alias_ordering():
     assert aliases == ["r1", "d1"]
 
 
-def test_sql_compiles_and_runs():
-    eng = DuckDBEngine()
-    eng.register_dataframe("t", pd.DataFrame({"a": [1, 2, 2]}))
+def test_sql_compiles_and_runs(duckdb_engine):
+    duckdb_engine.register_dataframe("t", pd.DataFrame({"a": [1, 2, 2]}))
     reqs = [
         MetricRequest(column="a", metric="row_cnt", alias="rc"),
         MetricRequest(column="a", metric="distinct_cnt", alias="dc"),
     ]
     builder = MetricBatchBuilder(table="t", requests=reqs, dialect="duckdb")
     sql = builder.sql()
-    df = eng.run_sql(sql)
+    df = duckdb_engine.run_sql(sql)
     assert set(df.columns) == {"rc", "dc"}
 
 def test_apply_filter_generates_conditional_aggregates():
@@ -63,17 +65,16 @@ def test_malicious_filter_rejected():
         builder.sql()
 
 
-def test_filtered_distinct_and_non_null_counts():
-    eng = DuckDBEngine()
+def test_filtered_distinct_and_non_null_counts(duckdb_engine):
     df = pd.DataFrame({"a": [1, None, 2, 3], "b": [1, 1, 0, 1]})
-    eng.register_dataframe("t", df)
+    duckdb_engine.register_dataframe("t", df)
 
     req1 = MetricRequest(column="a", metric="distinct_cnt", alias="dc", filter_sql="b = 1")
     req2 = MetricRequest(column="a", metric="non_null_cnt", alias="nn", filter_sql="b = 1")
 
     builder = MetricBatchBuilder(table="t", requests=[req1, req2], dialect="duckdb")
     sql = builder.sql()
-    df_res = eng.run_sql(sql)
+    df_res = duckdb_engine.run_sql(sql)
 
     assert df_res.loc[0, "dc"] == 2
     assert df_res.loc[0, "nn"] == 2
