@@ -4,6 +4,9 @@ import pytest
 from src.expectations.validators.column import ColumnNotNull, ColumnNullPct
 from src.expectations.validators.table import DuplicateRowValidator
 from src.expectations.validators.base import ValidatorBase
+from src.expectations.engines.duckdb import DuckDBEngine
+from src.expectations.engines.file import FileEngine
+from src.expectations.runner import ValidationRunner
 
 
 class FaultyValidator(ValidatorBase):
@@ -71,3 +74,27 @@ def test_metric_error_capture(duckdb_engine, validation_runner):
     assert res.success is False
     assert "error" in res.details
     assert "traceback" in res.details
+
+
+def test_multiple_engines(tmp_path):
+    df = pd.DataFrame({"a": [1, 2]})
+    duck = DuckDBEngine()
+    duck.register_dataframe("duck_t", df)
+    csv = tmp_path / "t.csv"
+    df.to_csv(csv, index=False)
+    file_eng = FileEngine(csv, table="file_t")
+    runner = ValidationRunner({"duck": duck, "file": file_eng})
+    bindings = [
+        ("duck", "duck_t", ColumnNotNull(column="a")),
+        ("file", "file_t", ColumnNotNull(column="a")),
+    ]
+    try:
+        results = runner.run(bindings, run_id="run1")
+    finally:
+        duck.close()
+        file_eng.close()
+    assert {r.engine_name for r in results} == {"duck", "file"}
+    res_map = {r.engine_name: r for r in results}
+    assert res_map["duck"].table == "duck_t"
+    assert res_map["file"].table == "file_t"
+    assert all(r.success for r in results)
