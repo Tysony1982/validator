@@ -100,7 +100,11 @@ class ValidationRunner:
         for eng_key, table, v in custom_bindings:
             engine = self.engine_map[eng_key]
             sql_or_ast = v.custom_sql(table)
-            sql = sql_or_ast.sql() if isinstance(sql_or_ast, exp.Expression) else str(sql_or_ast)
+            sql = (
+                sql_or_ast.sql(dialect=engine.get_dialect())
+                if isinstance(sql_or_ast, exp.Expression)
+                else str(sql_or_ast)
+            )
             err = ""
             err_tb = ""
             try:

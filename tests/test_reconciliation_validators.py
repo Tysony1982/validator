@@ -89,6 +89,24 @@ def test_column_mapping_with_renames_and_conversion():
     assert res.success is True
 
 
+def test_column_mapping_with_case_normalization():
+    primary = DuckDBEngine()
+    comparer = DuckDBEngine()
+    primary.register_dataframe("t1", pd.DataFrame({"a": ["A", "B"]}))
+    comparer.register_dataframe("t2", pd.DataFrame({"a": ["a", "b"]}))
+
+    mapping = ColumnMapping("a", primary_case="lower", comparer_case="lower")
+    v = ColumnReconciliationValidator(
+        column_map=mapping,
+        primary_engine=primary,
+        primary_table="t1",
+        comparer_engine=comparer,
+        comparer_table="t2",
+    )
+    res = _run({"primary": primary, "comp": comparer}, "t1", v)
+    assert res.success is True
+
+
 
 def test_column_reconciliation_mismatched_schema():
     primary = DuckDBEngine()

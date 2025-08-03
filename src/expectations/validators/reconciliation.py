@@ -9,6 +9,7 @@ import pandas as pd
 from src.expectations.engines.base import BaseEngine
 from src.expectations.metrics.batch_builder import MetricBatchBuilder, MetricRequest
 from src.expectations.utils.mappings import ColumnMapping, validate_column_mapping
+from src.expectations.utils.comparer import run_metrics
 from src.expectations.validators.base import ValidatorBase
 from src.expectations.validators.column import ColumnMetricValidator
 
@@ -107,8 +108,8 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
         row = df.iloc[0]
         primary = {m: row[m] for m in self._metrics}
 
-        cmp_requests = []
         comparer_col = self.column_map.comparer or self.column_map.primary
+        cmp_requests = []
         for metric in self._metrics:
             col = comparer_col if metric != "row_cnt" else "*"
             cmp_requests.append(
@@ -119,12 +120,9 @@ class ColumnReconciliationValidator(ColumnMetricValidator):
                     filter_sql=self.comparer_where,
                 )
             )
-        sql = MetricBatchBuilder(
-            table=self.comparer_table, requests=cmp_requests
-        ).build_query_ast()
-        cmp_df = self.comparer_engine.run_sql(sql)
-        cmp_row = cmp_df.iloc[0]
-        comparer = {m: cmp_row[m] for m in self._metrics}
+        comparer = run_metrics(
+            self.comparer_engine, self.comparer_table, cmp_requests
+        )
 
         for metric in self._metrics:
             p_val, c_val = self.column_map.convert(primary[metric], comparer[metric])
@@ -182,11 +180,8 @@ class TableReconciliationValidator(ValidatorBase):
             alias="row_cnt",
             filter_sql=self.comparer_where,
         )
-        sql = MetricBatchBuilder(
-            table=self.comparer_table, requests=[cmp_request]
-        ).build_query_ast()
-        cmp_df = self.comparer_engine.run_sql(sql)
-        comparer_cnt = int(cmp_df.iloc[0]["row_cnt"]) if not cmp_df.empty else 0
+        cmp = run_metrics(self.comparer_engine, self.comparer_table, [cmp_request])
+        comparer_cnt = int(cmp.get("row_cnt") or 0)
 
         self.details = {"primary": primary_cnt, "comparer": comparer_cnt}
         return primary_cnt == comparer_cnt
