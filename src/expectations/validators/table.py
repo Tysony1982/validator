@@ -15,7 +15,6 @@ from typing import List, Sequence
 
 import pandas as pd
 
-from sqlglot import exp
 
 from src.expectations.metrics.batch_builder import MetricRequest
 from src.expectations.validators.base import ValidatorBase
@@ -116,16 +115,14 @@ class PrimaryKeyUniquenessValidator(ValidatorBase):
 
     @classmethod
     def kind(cls):
-        return "custom"
+        return "metric"
 
-    def custom_sql(self, table: str):
-        distinct = exp.Count(
-            this=exp.Distinct(expressions=[exp.column(c) for c in self.key_cols])
+    def metric_request(self) -> MetricRequest:
+        return MetricRequest(
+            column=self.key_cols,
+            metric="duplicate_row_cnt",
+            alias=self.runtime_id,
         )
-        diff = exp.Sub(this=exp.Count(this=exp.Star()), expression=distinct).as_(
-            "dup_cnt"
-        )
-        return exp.select(diff).from_(table)
 
     def interpret(self, value) -> bool:
         if isinstance(value, pd.DataFrame):
