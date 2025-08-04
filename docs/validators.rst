@@ -11,6 +11,9 @@ modules under ``src/expectations/validators``:
 
 Validators are executed by the :doc:`runner` and can emit useful
 :doc:`metrics` or participate in :doc:`reconciliation` workflows.
+Metric-based validators targeting the same table and engine are
+batched and executed in a single query to reduce round-trips. See
+:ref:`metrics-batching` for more detail.
 
 ColumnDistinctCount
 -------------------
