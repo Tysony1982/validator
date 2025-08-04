@@ -274,6 +274,54 @@ class ColumnMatchesRegex(ColumnMetricValidator):
         return self.invalid_cnt == 0
 
 
+class ColumnLength(ColumnMetricValidator):
+    """Passes when string lengths fall within the specified bounds."""
+
+    _metric_key = "row_cnt"
+
+    def __init__(
+        self,
+        *,
+        column: str,
+        min_length: int | None = None,
+        max_length: int | None = None,
+        trim: bool = False,
+        where: str | None = None,
+    ):
+        if min_length is None and max_length is None:
+            raise ValueError("min_length or max_length must be provided")
+        super().__init__(column=column, where=where)
+        self.min_length = min_length
+        self.max_length = max_length
+        self.trim = trim
+
+    def metric_request(self) -> MetricRequest:
+        length_expr = (
+            f"LENGTH(TRIM({self.column}))" if self.trim else f"LENGTH({self.column})"
+        )
+        conds: list[str] = []
+        if self.min_length is not None:
+            conds.append(f"{length_expr} < {self.min_length}")
+        if self.max_length is not None:
+            conds.append(f"{length_expr} > {self.max_length}")
+        cond = " OR ".join(conds)
+        if self.where_condition:
+            cond = f"({self.where_condition}) AND ({cond})"
+        return MetricRequest(
+            column=self.column,
+            metric=self._metric_key,
+            alias=self.runtime_id,
+            filter_sql=cond,
+        )
+
+    def interpret(self, value) -> bool:
+        if value is None or (isinstance(value, float) and value != value):
+            self.invalid_cnt = 0
+        else:
+            self.invalid_cnt = int(value)
+        return self.invalid_cnt == 0
+
+
 class ColumnRange(ColumnMetricValidator):
     """Passes when values fall between ``min_value`` and ``max_value``.
 
