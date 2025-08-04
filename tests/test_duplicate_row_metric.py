@@ -2,7 +2,6 @@ import pandas as pd
 from sqlglot import select
 
 from src.expectations.metrics.registry import get_metric
-from src.expectations.validators import column  # noqa: F401  # ensure metric registration
 
 
 def _run_expr(engine, table: str, expr):

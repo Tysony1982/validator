@@ -11,11 +11,12 @@ additional metrics at import time via the :func:`register_metric` decorator.
 
 Built-ins provided out-of-the-box
 ---------------------------------
-key           | meaning                               | expression
---------------|---------------------------------------|------------------------------------
-``null_pct``  | percentage of NULL values             | ``SUM(CASE WHEN col IS NULL THEN 1 END) / COUNT(*)``
-``distinct_cnt`` | count of distinct values            | ``COUNT(DISTINCT col)``
-``row_cnt``   | total row count (ignores *col* arg)   | ``COUNT(*)``
+key                | meaning                               | expression
+------------------|---------------------------------------|------------------------------------
+``null_pct``       | percentage of NULL values             | ``SUM(CASE WHEN col IS NULL THEN 1 END) / COUNT(*)``
+``distinct_cnt``   | count of distinct values              | ``COUNT(DISTINCT col)``
+``row_cnt``        | total row count (ignores *col* arg)   | ``COUNT(*)``
+``duplicate_cnt``  | count of duplicate values             | ``COUNT(*) - COUNT(DISTINCT col)``
 
 """
 
@@ -146,6 +147,15 @@ def _row_cnt(_: str) -> exp.Expression:
     'COUNT(*)'
     """
     return exp.Count(this=exp.Star())
+
+
+@register_metric("duplicate_cnt")
+def _duplicate_cnt(column: str) -> exp.Expression:
+    """Number of duplicate values in ``column``."""
+
+    total = _row_cnt(column)
+    distinct = _distinct_cnt(column)
+    return exp.Sub(this=total, expression=distinct)
 
 
 @register_metric("duplicate_row_cnt")

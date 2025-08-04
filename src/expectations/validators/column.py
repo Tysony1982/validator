@@ -7,28 +7,16 @@ batch-execution architecture.
 
 * All classes inherit :class:`ColumnMetricValidator` which implements
   the boilerplate for metric-type validators.
-* Each validator registers (or re-uses) a metric key in
-  ``src.expectations.metrics.registry`` and provides `interpret()` logic.
-
-New metrics added here:
-    - ``min``      → MIN(column)
-    - ``max``      → MAX(column)
-    - ``row_cnt``  → COUNT(*)
+* Each validator re-uses a metric key in ``src.expectations.metrics.registry``
+  and provides ``interpret()`` logic.
 """
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-import pandas as pd
-from sqlglot import exp
-
 from src.expectations.metrics.batch_builder import MetricRequest
-from src.expectations.metrics.registry import (
-    register_metric,
-    get_metric,
-    register_percentile,
-)
+from src.expectations.metrics.registry import register_percentile
 from src.expectations.validators.base import ValidatorBase
 
 
@@ -396,18 +384,6 @@ class ColumnGreaterEqual(ColumnMetricValidator):
         else:
             self.invalid_cnt = int(value)
         return self.invalid_cnt == 0
-
-
-@register_metric("duplicate_cnt")
-def _duplicate_cnt(column: str) -> exp.Expression:
-    """Number of duplicate values in ``column``.
-
-    Computed as ``row_cnt - distinct_cnt`` for the given column.
-    """
-
-    total = get_metric("row_cnt")(column)
-    distinct = get_metric("distinct_cnt")(column)
-    return exp.Sub(this=total, expression=distinct)
 
 
 class ColumnUniquenessValidator(ColumnMetricValidator):
