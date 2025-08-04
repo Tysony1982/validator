@@ -66,6 +66,15 @@ def test_primary_key_uniqueness(duckdb_engine, validation_runner):
     )
 
 
+def test_primary_key_uniqueness_duplicate_count(duckdb_engine, validation_runner):
+    df = pd.DataFrame({"id": [1, 1, 1, 2, 2]})
+    duckdb_engine.register_dataframe("t", df)
+    v = PrimaryKeyUniquenessValidator(key_columns=["id"])
+    res = _run(validation_runner, "t", v)
+    assert res.success is False
+    assert v.duplicate_cnt == 3
+
+
 def test_table_freshness(duckdb_engine, validation_runner):
     now = pd.Timestamp.utcnow()
     fresh = pd.DataFrame({"ts": [now]})

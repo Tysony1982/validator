@@ -17,6 +17,14 @@ def test_duplicate_row_metric_counts_groups(duckdb_engine):
     assert val == 2
 
 
+def test_duplicate_row_metric_counts_all_duplicates(duckdb_engine):
+    df = pd.DataFrame({"a": [1, 1, 1, 2, 2, 3], "b": [1, 1, 1, 2, 2, 3]})
+    duckdb_engine.register_dataframe("t", df)
+    expr = get_metric("duplicate_row_cnt")("a,b")
+    val = _run_expr(duckdb_engine, "t", expr)
+    assert val == 3
+
+
 def test_duplicate_row_metric_no_dups(duckdb_engine):
     df = pd.DataFrame({"a": [1, 2], "b": [1, 2]})
     duckdb_engine.register_dataframe("t", df)

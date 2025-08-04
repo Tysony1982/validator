@@ -24,6 +24,18 @@ class FaultyValidator(ValidatorBase):
         return True
 
 
+class SimpleCustomValidator(ValidatorBase):
+    @classmethod
+    def kind(cls):
+        return "custom"
+
+    def custom_sql(self, table: str):
+        return "SELECT 1"
+
+    def interpret(self, value):
+        return True
+
+
 def test_metric_grouping(duckdb_engine, validation_runner, monkeypatch):
     duckdb_engine.register_dataframe("t", pd.DataFrame({"a": [1, 2, None]}))
 
@@ -57,7 +69,7 @@ def test_metric_and_custom_calls(duckdb_engine, validation_runner, monkeypatch):
 
     bindings = [
         ("duck", "t", ColumnNotNull(column="a")),
-        ("duck", "t", PrimaryKeyUniquenessValidator(key_columns=["a"])),
+        ("duck", "t", SimpleCustomValidator()),
     ]
     validation_runner.run(bindings, run_id="test")
     assert len(calls) == 2
@@ -77,6 +89,26 @@ def test_duplicate_row_validator_batched(duckdb_engine, validation_runner, monke
     bindings = [
         ("duck", "t", ColumnNotNull(column="a")),
         ("duck", "t", DuplicateRowValidator(key_columns=["a"])),
+    ]
+    validation_runner.run(bindings, run_id="test")
+    assert len(calls) == 1
+
+
+def test_primary_key_validator_batched(duckdb_engine, validation_runner, monkeypatch):
+    duckdb_engine.register_dataframe("t", pd.DataFrame({"a": [1, 1]}))
+
+    calls = []
+    original = duckdb_engine.run_sql
+
+    def spy(sql):
+        calls.append(sql)
+        return original(sql)
+
+    monkeypatch.setattr(duckdb_engine, "run_sql", spy)
+
+    bindings = [
+        ("duck", "t", ColumnNotNull(column="a")),
+        ("duck", "t", PrimaryKeyUniquenessValidator(key_columns=["a"])),
     ]
     validation_runner.run(bindings, run_id="test")
     assert len(calls) == 1
