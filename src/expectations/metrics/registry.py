@@ -23,7 +23,7 @@ key                | meaning                               | expression
 from __future__ import annotations
 
 import threading
-from typing import Callable, Dict, Tuple, Optional
+from typing import Callable, Dict, Tuple, Optional, Sequence
 
 from sqlglot import exp
 from src.expectations.metrics.utils import validate_filter_sql
@@ -159,11 +159,14 @@ def _duplicate_cnt(column: str) -> exp.Expression:
 
 
 @register_metric("duplicate_row_cnt")
-def _duplicate_row_cnt(columns: str) -> exp.Expression:
-    """Count duplicate groups based on ``columns``.
+def _duplicate_row_cnt(columns: "str | Sequence[str]") -> exp.Expression:
+    """Count duplicate groups based on *columns*.
 
-    ``columns`` may be a comma-separated list of key columns. The metric returns
-    the number of groups that contain more than one row.
+    Parameters
+    ----------
+    columns:
+        Either a comma-separated ``str`` or a sequence of key column names.  The
+        metric returns the number of groups that contain more than one row.
 
     Examples
     --------
@@ -171,7 +174,10 @@ def _duplicate_row_cnt(columns: str) -> exp.Expression:
     'COUNT(*) - COUNT(DISTINCT a, b)'
     """
 
-    keys = [c.strip() for c in columns.split(",") if c.strip()]
+    if isinstance(columns, str):
+        keys = [c.strip() for c in columns.split(",") if c.strip()]
+    else:
+        keys = [c.strip() for c in columns if c.strip()]
     if not keys:
         raise ValueError("duplicate_row_cnt requires at least one column")
 
