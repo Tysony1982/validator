@@ -33,7 +33,7 @@ class MetricRequest:
     MetricRequest(column='id', metric='row_cnt', alias='cnt', filter_sql=None)
     """
 
-    column: str
+    column: "str | Sequence[str]"
     metric: str
     alias: str
     filter_sql: Optional[str] = None  # optional per-metric WHERE

@@ -85,7 +85,7 @@ class DuplicateRowValidator(ValidatorBase):
 
     def metric_request(self) -> MetricRequest:
         return MetricRequest(
-            column=",".join(self.key_cols),
+            column=self.key_cols,
             metric="duplicate_row_cnt",
             alias=self.runtime_id,
         )

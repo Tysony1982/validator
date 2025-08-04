@@ -82,6 +82,31 @@ def test_duplicate_row_validator_batched(duckdb_engine, validation_runner, monke
     assert len(calls) == 1
 
 
+def test_multiple_duplicate_row_validators_batched(
+    duckdb_engine, validation_runner, monkeypatch
+):
+    """Running several duplicate-row validators should only issue one query."""
+
+    df = pd.DataFrame({"a": [1, 1], "b": [1, 1], "c": [1, 2]})
+    duckdb_engine.register_dataframe("t", df)
+
+    calls = []
+    original = duckdb_engine.run_sql
+
+    def spy(sql):
+        calls.append(sql)
+        return original(sql)
+
+    monkeypatch.setattr(duckdb_engine, "run_sql", spy)
+
+    bindings = [
+        ("duck", "t", DuplicateRowValidator(key_columns=["a"])),
+        ("duck", "t", DuplicateRowValidator(key_columns=["a", "b"])),
+    ]
+    validation_runner.run(bindings, run_id="test")
+    assert len(calls) == 1
+
+
 def test_error_propagation(duckdb_engine, validation_runner):
     duckdb_engine.register_dataframe("t", pd.DataFrame({"a": [1]}))
 
