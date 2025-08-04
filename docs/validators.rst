@@ -223,8 +223,8 @@ DuplicateRowValidator
 Checks for duplicate rows based on a list of *key_columns*.
 
 Passes when the duplicate count == 0.
-
-*kind()* returns "custom" → executed in its own query.
+Implemented via the :func:`duplicate_row_cnt <src.expectations.metrics.registry._duplicate_row_cnt>`
+metric and batched with other validators.
 
 MetricDriftValidator
 --------------------

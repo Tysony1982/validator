@@ -5,8 +5,8 @@ src.expectations.validators.table
 Table-level validators.
 
 * `RowCountValidator` – metric-based, folds into batch query.
-* `DuplicateRowValidator` – custom SQL example (non-batchable) that
-   checks for duplicates across a set of key columns.
+* `DuplicateRowValidator` – metric-based duplicate check across a set of
+  key columns.
 """
 
 from __future__ import annotations
@@ -67,16 +67,10 @@ class RowCountValidator(ValidatorBase):
 
 
 # --------------------------------------------------------------------------- #
-# Duplicate-row validator (custom SQL)                                        #
+# Duplicate-row validator                                                     #
 # --------------------------------------------------------------------------- #
 class DuplicateRowValidator(ValidatorBase):
-    """
-    Checks for duplicate rows based on a list of *key_columns*.
-
-    Passes when the duplicate count == 0.
-
-    *kind()* returns "custom" → executed in its own query.
-    """
+    """Passes when no duplicate rows exist across ``key_columns``."""
 
     def __init__(self, *, key_columns: Sequence[str]):
         super().__init__()
@@ -87,29 +81,13 @@ class DuplicateRowValidator(ValidatorBase):
     # ---- ValidatorBase interface ------------------------------------
     @classmethod
     def kind(cls):
-        return "custom"
+        return "metric"
 
-    def custom_sql(self, table: str):
-        """
-        Build:
-            SELECT COUNT(*) AS dup_cnt
-            FROM (
-                SELECT <cols>, COUNT(*) c
-                FROM table
-                GROUP BY <cols>
-                HAVING COUNT(*) > 1
-            ) d
-        """
-        inner = (
-            exp.select(
-                *map(exp.column, self.key_cols), exp.Count(this=exp.Star()).as_("c")
-            )
-            .from_(table)
-            .group_by(*map(exp.column, self.key_cols))
-            .having(exp.GT(this=exp.column("c"), expression=exp.Literal.number(1)))
-        )
-        return exp.select(exp.Count(this=exp.Star()).as_("dup_cnt")).from_(
-            inner.subquery("d")
+    def metric_request(self) -> MetricRequest:
+        return MetricRequest(
+            column=",".join(self.key_cols),
+            metric="duplicate_row_cnt",
+            alias=self.runtime_id,
         )
 
     def interpret(self, value) -> bool:
