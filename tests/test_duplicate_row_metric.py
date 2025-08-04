@@ -23,3 +23,19 @@ def test_duplicate_row_metric_no_dups(duckdb_engine):
     expr = get_metric("duplicate_row_cnt")("a,b")
     val = _run_expr(duckdb_engine, "t", expr)
     assert val == 0
+
+
+def test_duplicate_cnt_metric_counts_duplicates(duckdb_engine):
+    df = pd.DataFrame({"a": [1, 1, 2, 3, 3]})
+    duckdb_engine.register_dataframe("t", df)
+    expr = get_metric("duplicate_cnt")("a")
+    val = _run_expr(duckdb_engine, "t", expr)
+    assert val == 2
+
+
+def test_duplicate_cnt_metric_no_dups(duckdb_engine):
+    df = pd.DataFrame({"a": [1, 2]})
+    duckdb_engine.register_dataframe("t", df)
+    expr = get_metric("duplicate_cnt")("a")
+    val = _run_expr(duckdb_engine, "t", expr)
+    assert val == 0

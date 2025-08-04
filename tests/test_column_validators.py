@@ -135,13 +135,18 @@ def test_column_greater_equal(duckdb_engine, validation_runner):
 def test_column_uniqueness_validator(duckdb_engine, validation_runner):
     df_unique = pd.DataFrame({"a": [1, 2, 3]})
     duckdb_engine.register_dataframe("t1", df_unique)
-    ok = _run(validation_runner, "t1", ColumnUniquenessValidator(column="a"))
+    v_ok = ColumnUniquenessValidator(column="a")
+    ok = _run(validation_runner, "t1", v_ok)
     assert ok.success is True
+    assert v_ok.duplicate_cnt == 0
+    assert v_ok.kind() == "metric"
 
     df_dup = pd.DataFrame({"a": [1, 1, 2]})
     duckdb_engine.register_dataframe("t2", df_dup)
-    fail = _run(validation_runner, "t2", ColumnUniquenessValidator(column="a"))
+    v_fail = ColumnUniquenessValidator(column="a")
+    fail = _run(validation_runner, "t2", v_fail)
     assert fail.success is False
+    assert v_fail.duplicate_cnt == 1
 
 
 def test_column_length_basic_pass_fail(duckdb_engine, validation_runner):
