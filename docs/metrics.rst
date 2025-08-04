@@ -65,6 +65,8 @@ a metric via the ``_metric_key`` attribute and interpret the resulting value.
             self.active_pct = float(value)
             return self.active_pct > 0.95
 
+.. _metrics-batching:
+
 Batch execution
 ---------------
 
