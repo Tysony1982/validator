@@ -23,7 +23,7 @@ from typing import Any, Optional
 import pandas as pd
 from sqlglot import exp
 
-from src.expectations.metrics.batch_builder import MetricRequest, MetricBatchBuilder
+from src.expectations.metrics.batch_builder import MetricRequest
 from src.expectations.metrics.registry import (
     register_metric,
     get_metric,
@@ -398,7 +398,19 @@ class ColumnGreaterEqual(ColumnMetricValidator):
         return self.invalid_cnt == 0
 
 
-class ColumnUniquenessValidator(ValidatorBase):
+@register_metric("duplicate_cnt")
+def _duplicate_cnt(column: str) -> exp.Expression:
+    """Number of duplicate values in ``column``.
+
+    Computed as ``row_cnt - distinct_cnt`` for the given column.
+    """
+
+    total = get_metric("row_cnt")(column)
+    distinct = get_metric("distinct_cnt")(column)
+    return exp.Sub(this=total, expression=distinct)
+
+
+class ColumnUniquenessValidator(ColumnMetricValidator):
     """Passes when all values in ``column`` are unique.
 
     Example YAML::
@@ -407,30 +419,17 @@ class ColumnUniquenessValidator(ValidatorBase):
           column: user_id
     """
 
+    _metric_key = "duplicate_cnt"
+
     def __init__(self, *, column: str, where: str | None = None):
-        super().__init__(where=where)
-        self.column = column
-
-    @classmethod
-    def kind(cls):
-        return "custom"
-
-    def custom_sql(self, table: str):
-        distinct = get_metric("distinct_cnt")(self.column)
-        total = get_metric("row_cnt")(self.column)
-        if self.where_condition:
-            distinct = MetricBatchBuilder._apply_filter(distinct, self.where_condition)
-            total = MetricBatchBuilder._apply_filter(total, self.where_condition)
-        diff = exp.Sub(this=total, expression=distinct).as_("dup_cnt")
-        return exp.select(diff).from_(table)
+        super().__init__(column=column, where=where)
 
     def interpret(self, value) -> bool:
-        if isinstance(value, pd.DataFrame):
-            dup_cnt = int(value.iloc[0, 0]) if not value.empty else 0
+        if value is None or (isinstance(value, float) and value != value):
+            self.duplicate_cnt = 0
         else:
-            dup_cnt = int(value or 0)
-        self.duplicate_cnt = dup_cnt
-        return dup_cnt == 0
+            self.duplicate_cnt = int(value)
+        return self.duplicate_cnt == 0
 
 
 class MetricDriftValidator(ColumnMetricValidator):
