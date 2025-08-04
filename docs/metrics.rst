@@ -81,3 +81,48 @@ up each metric in the registry and constructs one ``SELECT`` statement:
     sql = MetricBatchBuilder(table="users", requests=requests).sql()
     # SELECT COUNT(*) AS r FROM users
 
+Filtering metrics
+-----------------
+
+Each :class:`MetricRequest` also accepts a ``filter_sql`` argument that applies
+an optional per-metric row filter.  Instead of emitting a single ``WHERE``
+clause, the builder rewrites each metric expression so that multiple requests
+can use different predicates simultaneously.
+
+.. code-block:: python
+
+    requests = [
+        MetricRequest(
+            column="*",
+            metric="row_cnt",
+            alias="active_rows",
+            filter_sql="status = 'active'",
+        )
+    ]
+    MetricBatchBuilder(table="users", requests=requests).sql()
+    # SELECT SUM(CASE WHEN status = 'active' THEN 1 END) AS active_rows FROM users
+
+Flow from validator ``where`` clauses
+-------------------------------------
+
+Validators expose a ``where`` argument that is passed through to
+``MetricRequest.filter_sql``.  When batching, each validator's filter becomes
+part of its metric expression:
+
+.. code-block:: python
+
+    from src.expectations.validators.column import ColumnNonNullCnt, ColumnDistinctCnt
+
+    v1 = ColumnNonNullCnt(column="email", where="status = 'active'")
+    v2 = ColumnDistinctCnt(column="id")
+    sql = MetricBatchBuilder(
+        table="users",
+        requests=[v.metric_request() for v in (v1, v2)],
+    ).sql()
+    # SELECT SUM(CASE WHEN status = 'active' THEN 1 END) AS v1,
+    #        COUNT(DISTINCT id) AS v2
+    # FROM users
+
+This design lets different validators operate on different subsets of a table
+while still being combined into a single query.
+
