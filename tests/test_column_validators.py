@@ -154,12 +154,37 @@ def test_column_length_basic_pass_fail(duckdb_engine, validation_runner):
 
 
 def test_column_length_trim_option(duckdb_engine, validation_runner):
-    df = pd.DataFrame({"a": [" a ", "bb ", "ccc"]})
+    df = pd.DataFrame({"a": [" a ", "bb ", "cc "]})
     duckdb_engine.register_dataframe("t", df)
     v_trim = ColumnLength(column="a", max_length=2, trim=True)
     assert _run(validation_runner, "t", v_trim).success is True
     v_no_trim = ColumnLength(column="a", max_length=2, trim=False)
     assert _run(validation_runner, "t", v_no_trim).success is False
+
+
+def test_column_length_min_only(duckdb_engine, validation_runner):
+    df_pass = pd.DataFrame({"a": ["ab", "cd"]})
+    duckdb_engine.register_dataframe("t1", df_pass)
+    assert _run(validation_runner, "t1", ColumnLength(column="a", min_length=2)).success is True
+
+    df_fail = pd.DataFrame({"a": ["a", "bc"]})
+    duckdb_engine.register_dataframe("t2", df_fail)
+    assert _run(validation_runner, "t2", ColumnLength(column="a", min_length=2)).success is False
+
+
+def test_column_length_max_only(duckdb_engine, validation_runner):
+    df_pass = pd.DataFrame({"a": ["a", "bb"]})
+    duckdb_engine.register_dataframe("t1", df_pass)
+    assert _run(validation_runner, "t1", ColumnLength(column="a", max_length=2)).success is True
+
+    df_fail = pd.DataFrame({"a": ["abc", "d"]})
+    duckdb_engine.register_dataframe("t2", df_fail)
+    assert _run(validation_runner, "t2", ColumnLength(column="a", max_length=2)).success is False
+
+
+def test_column_length_requires_bounds():
+    with pytest.raises(ValueError):
+        ColumnLength(column="a")
 
 
 def test_column_length_where_clause_filtering(duckdb_engine, validation_runner):
