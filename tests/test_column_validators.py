@@ -16,6 +16,7 @@ from src.expectations.validators.column import (
     ColumnValueInSet,
     ColumnMatchesRegex,
     ColumnRange,
+    ColumnLength,
     ColumnGreaterEqual,
     ColumnUniquenessValidator,
 )
@@ -141,6 +142,33 @@ def test_column_uniqueness_validator(duckdb_engine, validation_runner):
     duckdb_engine.register_dataframe("t2", df_dup)
     fail = _run(validation_runner, "t2", ColumnUniquenessValidator(column="a"))
     assert fail.success is False
+
+
+def test_column_length_basic_pass_fail(duckdb_engine, validation_runner):
+    df = pd.DataFrame({"a": ["abc", "d", "efgh"]})
+    duckdb_engine.register_dataframe("t", df)
+    validator = ColumnLength(column="a", min_length=2, max_length=3)
+    res = _run(validation_runner, "t", validator)
+    assert res.success is False
+    assert validator.invalid_cnt == 2
+
+
+def test_column_length_trim_option(duckdb_engine, validation_runner):
+    df = pd.DataFrame({"a": [" a ", "bb ", "ccc"]})
+    duckdb_engine.register_dataframe("t", df)
+    v_trim = ColumnLength(column="a", max_length=2, trim=True)
+    assert _run(validation_runner, "t", v_trim).success is True
+    v_no_trim = ColumnLength(column="a", max_length=2, trim=False)
+    assert _run(validation_runner, "t", v_no_trim).success is False
+
+
+def test_column_length_where_clause_filtering(duckdb_engine, validation_runner):
+    df = pd.DataFrame({"a": ["x", "long"], "b": [0, 1]})
+    duckdb_engine.register_dataframe("t", df)
+    v_pass = ColumnLength(column="a", max_length=1, where="b = 0")
+    assert _run(validation_runner, "t", v_pass).success is True
+    v_fail = ColumnLength(column="a", max_length=1, where="b = 1")
+    assert _run(validation_runner, "t", v_fail).success is False
 
 
 def test_column_min_where_clause(duckdb_engine, validation_runner):
