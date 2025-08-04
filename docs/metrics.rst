@@ -25,7 +25,8 @@ receive one or more column names and return a
 
 The decorator stores the builder in the registry so it can later be retrieved
 with :func:`get_metric` or used by validators.  The project ships with a small
-set of built‑in metrics such as ``null_pct``, ``distinct_cnt`` and ``row_cnt``.
+set of built‑in metrics such as ``null_pct``, ``distinct_cnt``,
+``row_cnt`` and ``duplicate_row_cnt``.
 
 Registering ``pct_where`` metrics
 ---------------------------------

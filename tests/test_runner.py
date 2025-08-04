@@ -2,7 +2,10 @@ import pandas as pd
 import pytest
 
 from src.expectations.validators.column import ColumnNotNull, ColumnNullPct
-from src.expectations.validators.table import DuplicateRowValidator
+from src.expectations.validators.table import (
+    DuplicateRowValidator,
+    PrimaryKeyUniquenessValidator,
+)
 from src.expectations.validators.base import ValidatorBase
 from src.expectations.engines.duckdb import DuckDBEngine
 from src.expectations.engines.file import FileEngine
@@ -54,10 +57,29 @@ def test_metric_and_custom_calls(duckdb_engine, validation_runner, monkeypatch):
 
     bindings = [
         ("duck", "t", ColumnNotNull(column="a")),
-        ("duck", "t", DuplicateRowValidator(key_columns=["a"])),
+        ("duck", "t", PrimaryKeyUniquenessValidator(key_columns=["a"])),
     ]
     validation_runner.run(bindings, run_id="test")
     assert len(calls) == 2
+
+
+def test_duplicate_row_validator_batched(duckdb_engine, validation_runner, monkeypatch):
+    duckdb_engine.register_dataframe("t", pd.DataFrame({"a": [1, 1]}))
+    calls = []
+    original = duckdb_engine.run_sql
+
+    def spy(sql):
+        calls.append(sql)
+        return original(sql)
+
+    monkeypatch.setattr(duckdb_engine, "run_sql", spy)
+
+    bindings = [
+        ("duck", "t", ColumnNotNull(column="a")),
+        ("duck", "t", DuplicateRowValidator(key_columns=["a"])),
+    ]
+    validation_runner.run(bindings, run_id="test")
+    assert len(calls) == 1
 
 
 def test_error_propagation(duckdb_engine, validation_runner):

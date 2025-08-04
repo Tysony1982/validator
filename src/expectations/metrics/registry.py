@@ -148,6 +148,30 @@ def _row_cnt(_: str) -> exp.Expression:
     return exp.Count(this=exp.Star())
 
 
+@register_metric("duplicate_row_cnt")
+def _duplicate_row_cnt(columns: str) -> exp.Expression:
+    """Count duplicate groups based on ``columns``.
+
+    ``columns`` may be a comma-separated list of key columns. The metric returns
+    the number of groups that contain more than one row.
+
+    Examples
+    --------
+    >>> _duplicate_row_cnt("a,b").sql()
+    'COUNT(*) - COUNT(DISTINCT a, b)'
+    """
+
+    keys = [c.strip() for c in columns.split(",") if c.strip()]
+    if not keys:
+        raise ValueError("duplicate_row_cnt requires at least one column")
+
+    row_cnt = exp.Count(this=exp.Star())
+    distinct = exp.Count(
+        this=exp.Distinct(expressions=[exp.column(k) for k in keys])
+    )
+    return exp.Sub(this=row_cnt, expression=distinct)
+
+
 @register_metric("min")
 def _min(column: str) -> exp.Expression:
     """Minimum value of *column*.
